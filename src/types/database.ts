@@ -59,6 +59,10 @@ export interface Transaction {
 export interface TransactionWithProduct extends Transaction {
     product_name: string;
     username: string;
+    brand?: string | null;
+    brand_type?: string | null;
+    type_number?: string | null;
+    color?: string | null;
 }
 
 // Form types for creating/updating

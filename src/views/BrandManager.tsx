@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Trash2, Plus, Database, Palette } from 'lucide-react';
 
 export function BrandManager() {
@@ -35,6 +36,21 @@ export function BrandManager() {
   const [selectedBrandForNumber, setSelectedBrandForNumber] = useState('');
 
   const [newColor, setNewColor] = useState('');
+
+  // Confirm Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, message: '', onConfirm: () => {} });
+
+  const showConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, message, onConfirm });
+  };
+
+  const closeConfirm = () => {
+    setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+  };
 
   useEffect(() => {
     loadAll();
@@ -153,7 +169,10 @@ export function BrandManager() {
                         variant="ghost" 
                         size="icon" 
                         className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => deleteBrand(item.id)}
+                        onClick={() => showConfirm('Yakin ingin menghapus brand ini?', () => {
+                            deleteBrand(item.id);
+                            closeConfirm();
+                        })}
                       >
                          <Trash2 className="h-4 w-4" />
                       </Button>
@@ -217,7 +236,10 @@ export function BrandManager() {
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => deleteBrandType(item.id)}
+                            onClick={() => showConfirm('Yakin ingin menghapus tipe brand ini?', () => {
+                                deleteBrandType(item.id);
+                                closeConfirm();
+                            })}
                         >
                             <Trash2 className="h-4 w-4" />
                         </Button>
@@ -282,7 +304,10 @@ export function BrandManager() {
                             variant="ghost" 
                             size="icon" 
                             className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => deleteTypeNumber(item.id)}
+                            onClick={() => showConfirm('Yakin ingin menghapus no. tipe ini?', () => {
+                                deleteTypeNumber(item.id);
+                                closeConfirm();
+                            })}
                         >
                             <Trash2 className="h-4 w-4" />
                         </Button>
@@ -329,7 +354,10 @@ export function BrandManager() {
                                         variant="ghost" 
                                         size="icon" 
                                         className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        onClick={() => deleteColor(item.id)}
+                                        onClick={() => showConfirm('Yakin ingin menghapus warna ini?', () => {
+                                            deleteColor(item.id);
+                                            closeConfirm();
+                                        })}
                                     >
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
@@ -342,6 +370,14 @@ export function BrandManager() {
         </TabsContent>
 
       </Tabs>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 }

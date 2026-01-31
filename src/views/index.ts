@@ -5,3 +5,5 @@ export { StockOpname } from './StockOpname';
 export { TransactionHistory } from './TransactionHistory';
 export { Layout } from './Layout';
 export { BrandManager } from './BrandManager';
+export { StockIn } from './StockIn';
+export { StockOut } from './StockOut';

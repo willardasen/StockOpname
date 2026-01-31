@@ -11,7 +11,9 @@ import {
   LogOut,
   Database,
   Menu,
-  X
+  X,
+  PackagePlus,
+  PackageMinus
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -48,6 +50,8 @@ export function Layout() {
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/products', icon: Package, label: 'Produk' },
+    { path: '/stock-in', icon: PackagePlus, label: 'Stok Masuk' },
+    { path: '/stock-out', icon: PackageMinus, label: 'Stok Keluar' },
     { path: '/stock-opname', icon: ClipboardCheck, label: 'Stock Opname' },
     { path: '/transactions', icon: History, label: 'Transaksi' },
     ...(isAdmin() ? [{ path: '/brand', icon: Database, label: 'Brand' }] : []),

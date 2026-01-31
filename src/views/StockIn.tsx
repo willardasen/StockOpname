@@ -1,0 +1,409 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { PackagePlus, Search, RotateCcw, Save, Trash2, Pencil, Download } from 'lucide-react';
+import { format } from 'date-fns';
+import { useTransactionStore, useAuthStore } from '../stores';
+import { ProductRepo, TransactionRepo } from '../repositories';
+import type { Product, TransactionWithProduct } from '../types/database';
+
+// Helper: Format number with thousands separator (dots)
+const formatNumber = (num: number | string | undefined): string => {
+  if (num === undefined || num === null || num === '') return '';
+  const cleanNum = num.toString().replace(/\D/g, '');
+  return new Intl.NumberFormat('id-ID').format(Number(cleanNum));
+};
+
+// Helper: Parse string with dots back to number
+const parseNumber = (val: string): number => {
+  if (!val) return 0;
+  const cleanVal = val.replace(/\D/g, '');
+  return Number(cleanVal);
+};
+
+export function StockIn() {
+  const { user } = useAuthStore();
+  const { createTransaction, isLoading: isSaving } = useTransactionStore();
+
+  // Form state
+  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [quantity, setQuantity] = useState<number>(0);
+  const [note, setNote] = useState('');
+  const [showResults, setShowResults] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Table state
+  const [recentTransactions, setRecentTransactions] = useState<TransactionWithProduct[]>([]);
+  const [tableSearch, setTableSearch] = useState('');
+
+  // Confirm Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, message: '', onConfirm: () => {} });
+
+  const showConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, message, onConfirm });
+  };
+
+  const closeConfirm = () => {
+    setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+  };
+
+  // Load recent transactions
+  const loadTransactions = useCallback(async () => {
+    try {
+      // Fetch recent IN transactions
+      const data = await TransactionRepo.getTransactionHistory(undefined, undefined, 'IN');
+      setRecentTransactions(data);
+    } catch (error) {
+      console.error("Failed to load transactions", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
+
+  // Search handler - use ProductRepo directly
+  const handleSearch = async () => {
+    if (!searchKeyword.trim()) return;
+    
+    setIsSearching(true);
+    try {
+      const results = await ProductRepo.searchProducts(searchKeyword);
+      setSearchResults(results);
+      setShowResults(true);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Select product from search results
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setSearchKeyword(product.name);
+    setShowResults(false);
+    setSearchResults([]);
+  };
+
+  // Reset form
+  const handleReset = () => {
+    setDate(format(new Date(), 'yyyy-MM-dd'));
+    setSearchKeyword('');
+    setSearchResults([]);
+    setSelectedProduct(null);
+    setQuantity(0);
+    setNote('');
+    setShowResults(false);
+  };
+
+  // Submit handler
+  const handleSubmit = async () => {
+    if (!selectedProduct) {
+      alert('Silakan pilih produk terlebih dahulu!');
+      return;
+    }
+    if (quantity <= 0) {
+      alert('Jumlah masuk harus lebih dari 0!');
+      return;
+    }
+    const trimmedNote = note.trim();
+    if (!trimmedNote) {
+      alert('Penanggung Jawab tidak boleh kosong!');
+      return;
+    }
+    if (!user) {
+      alert('User tidak ditemukan!');
+      return;
+    }
+
+    const success = await createTransaction({
+      product_id: selectedProduct.id,
+      user_id: user.id,
+      type: 'IN',
+      qty: quantity,
+      note: trimmedNote
+    });
+
+    if (success) {
+      alert('Stok masuk berhasil disimpan!');
+      handleReset();
+      loadTransactions();
+    } else {
+      alert('Gagal menyimpan stok masuk!');
+    }
+  };
+
+  const handleDeleteTransaction = async (id: number) => {
+      showConfirm('Apakah Anda yakin ingin menghapus transaksi ini? Stok akan dikembalikan.', async () => {
+          try {
+              const success = await TransactionRepo.deleteTransaction(id);
+              if (success) {
+                  alert('Transaksi berhasil dihapus.');
+                  loadTransactions();
+              } else {
+                  alert('Gagal menghapus transaksi.');
+              }
+          } catch (error) {
+              console.error("Failed to delete transaction", error);
+              alert('Terjadi kesalahan saat menghapus transaksi.');
+          }
+          closeConfirm();
+      });
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <PackagePlus className="h-6 w-6 text-green-600" />
+            Stok Masuk
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Catat barang yang masuk ke gudang
+          </p>
+        </div>
+      </div>
+
+      {/* Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg text-green-600">Form Barang Masuk</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Date and Product Search Row */}
+          <div className="flex flex-wrap gap-4 items-end">
+            {/* Date */}
+            <div className="space-y-2">
+              <Label htmlFor="date">Tanggal Masuk</Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-fit"
+              />
+            </div>
+
+            {/* Product Search */}
+            <div className="space-y-2 flex-1 min-w-[300px]">
+              <Label htmlFor="search">Kode / Nama Barang</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="search"
+                  placeholder="Ketik nama atau kode barang..."
+                  value={searchKeyword}
+                  onChange={(e) => {
+                    setSearchKeyword(e.target.value);
+                    if (selectedProduct) setSelectedProduct(null);
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <Button variant="outline" onClick={handleSearch} disabled={isSearching}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Cek Barang
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Search Results Dropdown - Full width, positioned below inputs */}
+          {showResults && searchResults.length > 0 && (
+            <div className="mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto z-10">
+              {searchResults.map((product) => (
+                <div
+                  key={product.id}
+                  className="px-4 py-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                  onClick={() => handleSelectProduct(product)}
+                >
+                  <div className="font-medium">{product.name}</div>
+                  <div className="text-sm text-gray-500">
+                    {product.brand} {product.brand_type} {product.type_number} - {product.color} | Stok: {product.stock}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {showResults && searchResults.length === 0 && (
+            <div className="mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg p-4 text-center text-gray-500">
+              Tidak ada produk ditemukan
+            </div>
+          )}
+
+          {/* Product Details (shown after selection) */}
+          {selectedProduct && (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-200 rounded-lg border">
+              <div className="space-y-2">
+                <Label>Nama Barang</Label>
+                <Input value={selectedProduct.name} readOnly className="bg-white" />
+              </div>
+              <div className="space-y-2">
+                <Label>Jenis Barang</Label>
+                <Input 
+                  value={`${selectedProduct.brand || ''} ${selectedProduct.brand_type || ''} ${selectedProduct.type_number || ''}`.trim()} 
+                  readOnly 
+                  className="bg-white" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Warna</Label>
+                <Input value={selectedProduct.color || '-'} readOnly className="bg-white" />
+              </div>
+              <div className="space-y-2">
+                <Label>Stok Saat Ini</Label>
+                <Input value={formatNumber(selectedProduct.stock)} readOnly className="bg-white font-bold text-green-600" />
+              </div>
+            </div>
+          )}
+
+          {/* Quantity and Note */}
+          {selectedProduct && (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="quantity">Jumlah Masuk</Label>
+                <Input
+                  id="quantity"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={formatNumber(quantity)}
+                  onChange={(e) => setQuantity(parseNumber(e.target.value))}
+                  className="placeholder:text-muted-foreground"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="note">Catatan / Penanggung Jawab</Label>
+                <Input
+                  id="note"
+                  placeholder="Masukkan catatan atau nama penanggung jawab..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="mt-6 flex gap-4">
+            <Button onClick={handleSubmit} disabled={isSaving || !selectedProduct} className="bg-green-600 hover:bg-green-700">
+              <Save className="h-4 w-4 mr-2" />
+              Simpan
+            </Button>
+            <Button variant="outline" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* History Table */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center gap-4">
+            <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Cari kode atau nama barang..."
+                    value={tableSearch}
+                    onChange={(e) => setTableSearch(e.target.value)}
+                    className="pl-9 bg-white text-black"
+                />
+            </div>
+             <div className="flex items-center gap-2">
+                 <select className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                     <option>Semua Gudang</option>
+                 </select>
+                <Button variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                </Button>
+             </div>
+        </div>
+
+        <div className="rounded-md border bg-white overflow-hidden shadow-sm">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-[#435585] text-white">
+              <tr>
+                <th className="px-4 py-3 font-medium">Tanggal</th>
+                <th className="px-4 py-3 font-medium">Nama Barang</th>
+                <th className="px-4 py-3 font-medium">Jenis</th>
+                <th className="px-4 py-3 font-medium">Satuan</th>
+                <th className="px-4 py-3 font-medium">Gudang</th>
+                <th className="px-4 py-3 font-medium">Penanggung Jawab</th>
+                <th className="px-4 py-3 font-medium text-right">Jumlah</th>
+                <th className="px-4 py-3 font-medium text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {recentTransactions
+                .filter(t => 
+                    !tableSearch || 
+                    t.product_name.toLowerCase().includes(tableSearch.toLowerCase()) ||
+                    (t.id.toString()).includes(tableSearch)
+                )
+                .map((t) => (
+                <tr key={t.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {format(new Date(t.created_at), 'dd/MM/yyyy')}
+                  </td>
+                  <td className="px-4 py-3 font-medium">{t.product_name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {t.brand} {t.brand_type}
+                  </td>
+                  <td className="px-4 py-3">Pcs</td>
+                  <td className="px-4 py-3">Gudang Utama</td>
+                  <td className="px-4 py-3 capitalize">
+                    {t.note || t.username || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium text-green-600">
+                    {formatNumber(t.qty)}
+                  </td>
+                   <td className="px-4 py-3 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() => handleDeleteTransaction(t.id)}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+               {recentTransactions.length === 0 && (
+                  <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                          Belum ada data transaksi hari ini
+                      </td>
+                  </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
+    </div>
+  );
+}

@@ -93,7 +93,7 @@ export function StockOpname() {
                   className={`p-3 rounded-lg border cursor-pointer transition-colors ${
                     selectedProduct?.id === product.id
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                      : 'hover:bg-gray-200'
                   }`}
                 >
                   <div className="flex justify-between items-start">
