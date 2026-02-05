@@ -1,7 +1,7 @@
 import { useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { cn } from '../../lib/utils';
-import type { Product } from '../../types/database';
+import { cn } from '@/lib/utils';
+import type { Product } from '@/types/database';
 
 interface Column<T> {
   key: keyof T | string;
@@ -14,7 +14,6 @@ interface Column<T> {
 interface VirtualTableProps<T> {
   data: T[];
   columns: Column<T>[];
-  onRowClick?: (row: T) => void;
   isAdmin?: boolean;
   rowHeight?: number;
   className?: string;
@@ -25,7 +24,6 @@ interface VirtualTableProps<T> {
 export function VirtualTable<T extends { id: number; stock?: number; min_stock?: number }>({
   data,
   columns,
-  onRowClick,
   isAdmin = false,
   rowHeight = 48,
   className,
@@ -108,14 +106,13 @@ export function VirtualTable<T extends { id: number; stock?: number; min_stock?:
               <div
                 key={row.id}
                 className={cn(
-                  "absolute top-0 left-0 w-full flex border-b hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors",
-                  lowStock && "bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30"
+                  "absolute top-0 left-0 w-full flex border-b transition-colors",
+                  lowStock && "bg-red-50 dark:bg-red-900/20"
                 )}
                 style={{
                   height: `${virtualRow.size}px`,
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
-                onClick={() => onRowClick?.(row)}
               >
                 {visibleColumns.map((col) => {
                   const value = getValue(row, col.key);

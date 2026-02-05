@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import { TransactionRepo } from '../repositories';
+import { TransactionRepo } from '@/repositories';
 import type {
     TransactionWithProduct,
     CreateTransactionInput,
     StockAdjustmentInput,
     TransactionType
-} from '../types/database';
+} from '@/types/database';
 
 interface TransactionState {
     transactions: TransactionWithProduct[];

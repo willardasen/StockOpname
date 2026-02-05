@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { AuthRepo } from '../repositories/AuthRepo';
-import type { User } from '../types/database';
-import type { LoginCredentials } from '../types/auth';
+import { AuthRepo } from '@/repositories/AuthRepo';
+import type { User } from '@/types/database';
+import type { LoginCredentials } from '@/types/auth';
 
 interface AuthState {
     user: User | null;

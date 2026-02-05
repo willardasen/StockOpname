@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
-import { useAuthStore, useProductStore } from '../stores';
-import { useProductForm } from '../hooks';
-import { VirtualTable, SearchInput, ProductFormModal } from '../components/common';
-import { Button } from '../components/ui/button';
-import { Plus, Package } from 'lucide-react';
-import type { Product } from '../types/database';
+import { useEffect, useState } from 'react';
+import { useAuthStore, useProductStore } from '@/stores';
+import { useProductForm } from '@/hooks';
+import { VirtualTable, SearchInput, ProductFormModal } from '@/components/common';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Button } from '@/components/ui/button';
+import { Plus, Package, Pencil, Trash2 } from 'lucide-react';
+import type { Product } from '@/types/database';
 
 export function ProductList() {
   const { isAdmin } = useAuthStore();
@@ -24,8 +25,23 @@ export function ProductList() {
     handleAddNew,
     handleEdit,
     handleSubmit,
-    handleDelete
+    handleDeleteProduct
   } = useProductForm();
+
+  // Confirm Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, message: '', onConfirm: () => {} });
+
+  const showConfirm = (message: string, onConfirm: () => void) => {
+    setConfirmDialog({ isOpen: true, message, onConfirm });
+  };
+
+  const closeConfirm = () => {
+    setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
+  };
 
   useEffect(() => {
     loadProducts();
@@ -62,6 +78,42 @@ export function ProductList() {
       )
     },
     { key: 'min_stock' as const, header: 'Min Stok', width: 80 },
+    // Action column (admin only)
+    {
+      key: 'actions' as const,
+      header: 'Aksi',
+      width: 120,
+      adminOnly: true,
+      render: (_value: unknown, row: Product) => (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(row);
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              showConfirm(`Yakin ingin menghapus produk "${row.name}"?`, async () => {
+                await handleDeleteProduct(row.id);
+                closeConfirm();
+              });
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )
+    },
   ];
 
   const formatCurrency = (value: number) => {
@@ -76,11 +128,6 @@ export function ProductList() {
     searchProducts(keyword);
   };
 
-  const handleRowClick = (product: Product) => {
-    if (isAdmin()) {
-      handleEdit(product);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -115,7 +162,6 @@ export function ProductList() {
         data={products}
         columns={columns}
         isAdmin={isAdmin()}
-        onRowClick={handleRowClick}
         highlightLowStock={true}
         emptyMessage="Tidak ada produk ditemukan"
       />
@@ -128,8 +174,19 @@ export function ProductList() {
         formData={formData}
         setFormData={setFormData}
         onSubmit={handleSubmit}
-        onDelete={handleDelete}
+        onDelete={() => showConfirm('Yakin ingin menghapus produk ini?', async () => {
+          await handleDeleteProduct();
+          closeConfirm();
+        })}
         isLoading={isLoading}
+      />
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
       />
     </div>
   );

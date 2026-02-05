@@ -1,19 +1,19 @@
 import { useEffect, useState, useRef, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { initializeDatabase } from './repositories';
-import { ProtectedRoute } from './components/common';
-import { Layout } from './views/Layout';
+import { initializeDatabase } from '@/repositories';
+import { ProtectedRoute } from '@/components/common';
+import { Layout } from '@/views/Layout';
 
 // Lazy Loading Components
 // Lazy Loading Components
-const Login = lazy(() => import('./views/Login').then(module => ({ default: module.Login })));
-const Dashboard = lazy(() => import('./views/Dashboard').then(module => ({ default: module.Dashboard })));
-const ProductList = lazy(() => import('./views/ProductList').then(module => ({ default: module.ProductList })));
-const StockOpname = lazy(() => import('./views/StockOpname').then(module => ({ default: module.StockOpname })));
-const TransactionHistory = lazy(() => import('./views/TransactionHistory').then(module => ({ default: module.TransactionHistory })));
-const BrandManager = lazy(() => import('./views/BrandManager').then(module => ({ default: module.BrandManager })));
-const StockIn = lazy(() => import('./views/StockIn').then(module => ({ default: module.StockIn })));
-const StockOut = lazy(() => import('./views/StockOut').then(module => ({ default: module.StockOut })));
+const Login = lazy(() => import('@/views/Login').then(module => ({ default: module.Login })));
+const Dashboard = lazy(() => import('@/views/Dashboard').then(module => ({ default: module.Dashboard })));
+const ProductList = lazy(() => import('@/views/ProductList').then(module => ({ default: module.ProductList })));
+const StockOpname = lazy(() => import('@/views/StockOpname').then(module => ({ default: module.StockOpname })));
+const TransactionHistory = lazy(() => import('@/views/TransactionHistory').then(module => ({ default: module.TransactionHistory })));
+const BrandManager = lazy(() => import('@/views/BrandManager').then(module => ({ default: module.BrandManager })));
+const StockIn = lazy(() => import('@/views/StockIn').then(module => ({ default: module.StockIn })));
+const StockOut = lazy(() => import('@/views/StockOut').then(module => ({ default: module.StockOut })));
 import './App.css';
 
 function App() {
@@ -31,7 +31,7 @@ function App() {
         await initializeDatabase();
         
         // DEBUG: Check Schema
-        const { getDb } = await import('./repositories/db');
+        const { getDb } = await import('@/repositories/db');
         const db = await getDb();
         console.log("DEBUG: brand_types schema:", await db.select("PRAGMA table_info(brand_types)"));
         console.log("DEBUG: type_numbers schema:", await db.select("PRAGMA table_info(type_numbers)"));

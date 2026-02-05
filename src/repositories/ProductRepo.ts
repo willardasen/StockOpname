@@ -1,5 +1,5 @@
 import { getDb } from "./db";
-import type { Product, CreateProductInput, UpdateProductInput } from "../types/database";
+import type { Product, CreateProductInput, UpdateProductInput } from "@/types/database";
 
 const SEARCH_LIMIT = 50; // Performance limit for search results
 

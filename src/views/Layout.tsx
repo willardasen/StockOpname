@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../stores';
-import { Button } from '../components/ui/button';
+import { useAuthStore } from '@/stores';
+import { Button } from '@/components/ui/button';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { 

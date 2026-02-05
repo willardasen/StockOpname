@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getDb } from "./db";
-import type { User, UserWithPassword } from "../types/database";
+import type { User, UserWithPassword } from "@/types/database";
 import type { LoginCredentials, CreateUserInput } from "@/types/auth";
 
 export const AuthRepo = {

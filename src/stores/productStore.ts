@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { ProductRepo } from '../repositories';
-import type { Product, CreateProductInput, UpdateProductInput } from '../types/database';
+import { ProductRepo } from '@/repositories';
+import type { Product, CreateProductInput, UpdateProductInput } from '@/types/database';
 
 interface ProductState {
     products: Product[];

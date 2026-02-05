@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useProductStore } from '../stores';
-import type { Product, CreateProductInput } from '../types/database';
+import { useProductStore } from '@/stores';
+import type { Product, CreateProductInput } from '@/types/database';
 
 export function useProductForm() {
     const {
@@ -85,6 +85,16 @@ export function useProductForm() {
         }
     };
 
+    // Delete product by ID (for direct delete from table)
+    const handleDeleteProduct = async (productId?: number) => {
+        const idToDelete = productId ?? selectedProduct?.id;
+        if (idToDelete) {
+            await deleteProduct(idToDelete);
+            setShowModal(false);
+            loadProducts();
+        }
+    };
+
     return {
         showModal,
         setShowModal,
@@ -94,6 +104,7 @@ export function useProductForm() {
         handleAddNew,
         handleEdit,
         handleSubmit,
-        handleDelete
+        handleDelete,
+        handleDeleteProduct
     };
 }

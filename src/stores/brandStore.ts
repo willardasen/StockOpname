@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { getDb } from '../repositories/db';
-import type { Brand, BrandType, TypeNumber, Color } from '../types/database';
+import { getDb } from '@/repositories/db';
+import type { Brand, BrandType, TypeNumber, Color } from '@/types/database';
 
 interface MasterDataStore {
     brands: Brand[];

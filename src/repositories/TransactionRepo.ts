@@ -4,7 +4,7 @@ import type {
     TransactionType,
     CreateTransactionInput,
     StockAdjustmentInput,
-} from "../types/database";
+} from "@/types/database";
 
 export const TransactionRepo = {
     /**

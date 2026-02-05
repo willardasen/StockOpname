@@ -8,7 +8,7 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
-import { useProductStore, useTransactionStore } from '../stores';
+import { useProductStore, useTransactionStore } from '@/stores';
 
 // Helper to format number with Indonesian locale (dots for thousands)
 const formatNumber = (num: number): string => {

@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { ConfirmDialog } from '../components/ui/confirm-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PackagePlus, Search, RotateCcw, Save, Trash2, Pencil, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { useTransactionStore, useAuthStore } from '../stores';
-import { ProductRepo, TransactionRepo } from '../repositories';
-import type { Product, TransactionWithProduct } from '../types/database';
+import { useTransactionStore, useAuthStore } from '@/stores';
+import { ProductRepo, TransactionRepo } from '@/repositories';
+import type { Product, TransactionWithProduct } from '@/types/database';
 
 // Helper: Format number with thousands separator (dots)
 const formatNumber = (num: number | string | undefined): string => {

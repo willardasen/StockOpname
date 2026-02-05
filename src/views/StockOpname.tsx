@@ -137,7 +137,7 @@ export function StockOpname() {
             {selectedProduct ? (
               <form onSubmit={submitAdjustment} className="space-y-4">
                 {/* Selected Product Info */}
-                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="p-4 bg-gray-200 rounded-lg">
                   <p className="font-medium text-lg">{selectedProduct.name}</p>
                   <p className="text-sm text-gray-500">
                     {[selectedProduct.brand, selectedProduct.brand_type, selectedProduct.color]
