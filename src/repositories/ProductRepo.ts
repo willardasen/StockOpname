@@ -10,7 +10,13 @@ export const ProductRepo = {
     async getAllProducts(limit?: number): Promise<Product[]> {
         const db = await getDb();
 
-        let query = "SELECT * FROM products WHERE is_active = 1 ORDER BY name ASC";
+        let query = `
+            SELECT p.*, b.pcs_per_box 
+            FROM products p 
+            LEFT JOIN brands b ON p.brand = b.name 
+            WHERE p.is_active = 1 
+            ORDER BY p.name ASC
+        `;
         if (limit) {
             query += ` LIMIT ${limit}`;
         }
@@ -27,11 +33,13 @@ export const ProductRepo = {
         const searchTerm = `%${keyword}%`;
 
         return db.select<Product[]>(
-            `SELECT * FROM products 
-       WHERE is_active = 1 
-       AND (name LIKE ? OR brand LIKE ? OR type_number LIKE ? OR color LIKE ?)
-       ORDER BY name ASC
-       LIMIT ?`,
+            `SELECT p.*, b.pcs_per_box 
+             FROM products p 
+             LEFT JOIN brands b ON p.brand = b.name
+             WHERE p.is_active = 1 
+             AND (p.name LIKE ? OR p.brand LIKE ? OR p.type_number LIKE ? OR p.color LIKE ?)
+             ORDER BY p.name ASC
+             LIMIT ?`,
             [searchTerm, searchTerm, searchTerm, searchTerm, limit]
         );
     },
@@ -43,7 +51,10 @@ export const ProductRepo = {
         const db = await getDb();
 
         const products = await db.select<Product[]>(
-            "SELECT * FROM products WHERE id = ?",
+            `SELECT p.*, b.pcs_per_box 
+             FROM products p 
+             LEFT JOIN brands b ON p.brand = b.name
+             WHERE p.id = ?`,
             [id]
         );
 
@@ -163,7 +174,11 @@ export const ProductRepo = {
         const db = await getDb();
 
         return db.select<Product[]>(
-            "SELECT * FROM products WHERE is_active = 1 AND stock <= min_stock ORDER BY (min_stock - stock) DESC"
+            `SELECT p.*, b.pcs_per_box 
+             FROM products p 
+             LEFT JOIN brands b ON p.brand = b.name
+             WHERE p.is_active = 1 AND p.stock <= p.min_stock 
+             ORDER BY (p.min_stock - p.stock) DESC`
         );
     },
 

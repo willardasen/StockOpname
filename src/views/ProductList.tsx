@@ -48,11 +48,11 @@ export function ProductList() {
   }, [loadProducts]);
 
   const columns = [
-    { key: 'name' as const, header: 'Nama Produk', width: 200 },
-    { key: 'brand' as const, header: 'Brand', width: 120 },
-    { key: 'brand_type' as const, header: 'Tipe', width: 100 },
-    { key: 'type_number' as const, header: 'No. Tipe', width: 100 },
-    { key: 'color' as const, header: 'Warna', width: 80 },
+    { key: 'name' as const, header: 'Nama Produk', width: 180 },
+    { key: 'brand' as const, header: 'Brand', width: 100 },
+    { key: 'brand_type' as const, header: 'Tipe', width: 90 },
+    { key: 'type_number' as const, header: 'No. Tipe', width: 90 },
+    { key: 'color' as const, header: 'Warna', width: 70 },
     { 
       key: 'buy_price' as const, 
       header: 'Harga Beli', 
@@ -63,26 +63,52 @@ export function ProductList() {
     { 
       key: 'sell_price' as const, 
       header: 'Harga Jual', 
-      width: 120,
+      width: 110,
       adminOnly: true,
       render: (value: unknown) => formatCurrency(value as number)
     },
     { 
+      key: 'box_quantity', 
+      header: 'Box', 
+      width: 80, 
+      render: (_: unknown, row: Product) => {
+        const stock = row.stock;
+        const pcsPerBox = row.pcs_per_box || 1;
+        
+        return (
+          <div>
+            {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(stock / pcsPerBox)}
+          </div>
+        );
+      }
+    },
+    { 
       key: 'stock' as const, 
       header: 'Stok', 
-      width: 80,
-      render: (value: unknown, row: Product) => (
-        <span className={row.stock <= row.min_stock ? 'text-red-600 font-bold' : ''}>
-          {value as number}
-        </span>
-      )
+      width: 120,
+      render: (value: unknown, row: Product) => {
+        const stock = value as number;
+        const pcsPerBox = row.pcs_per_box || 1;
+        const isLow = stock <= row.min_stock;
+        
+        return (
+          <div className={isLow ? 'text-red-600 font-bold' : ''}>
+             <div>{stock} Pcs</div>
+             {pcsPerBox > 1 && (
+                 <div className="text-xs text-gray-500 font-normal">
+                     {Math.floor(stock / pcsPerBox)} Box {stock % pcsPerBox} Pcs
+                 </div>
+             )}
+          </div>
+        );
+      }
     },
-    { key: 'min_stock' as const, header: 'Min Stok', width: 80 },
+    { key: 'min_stock' as const, header: 'Min Stok', width: 70 },
     // Action column (admin only)
     {
       key: 'actions' as const,
       header: 'Aksi',
-      width: 120,
+      width: 100,
       adminOnly: true,
       render: (_value: unknown, row: Product) => (
         <div className="flex items-center gap-1">

@@ -19,6 +19,7 @@ export interface Product {
     id: number;
     name: string;
     brand: string | null;
+    pcs_per_box?: number;
     brand_type: string | null;
     type_number: string | null;
     color: string | null;
@@ -63,6 +64,7 @@ export interface TransactionWithProduct extends Transaction {
     brand_type?: string | null;
     type_number?: string | null;
     color?: string | null;
+    pcs_per_box?: number;
 }
 
 // Form types for creating/updating
@@ -100,6 +102,7 @@ export interface StockAdjustmentInput {
 export interface Brand {
     id: number;
     name: string;
+    pcs_per_box: number;
 }
 
 export interface BrandType {

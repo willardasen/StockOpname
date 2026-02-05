@@ -61,11 +61,13 @@ export function ProductFormModal({
   // Derived state for filtering
   const selectedBrandObj = brands.find(b => b.name === formData.brand);
   const selectedBrandId = selectedBrandObj?.id;
+  const pcsPerBox = selectedBrandObj?.pcs_per_box || 1;
 
   const filteredBrandTypes = useMemo(() => {
     if (!selectedBrandId) return [];
     return brandTypes.filter(bt => bt.brand_id === selectedBrandId);
   }, [brandTypes, selectedBrandId]);
+
 
   const filteredTypeNumbers = useMemo(() => {
     if (!selectedBrandId) return [];
@@ -147,7 +149,7 @@ export function ProductFormModal({
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                   readOnly 
-                  className="bg-gray-100 text-gray-700"
+                  className="bg-gray-100 text-gray-700 font-medium"
                 />
               </div>
               
@@ -242,7 +244,7 @@ export function ProductFormModal({
                 <Input
                   id="sell_price"
                   type="text"
-                   inputMode="numeric"
+                  inputMode="numeric"
                   value={formatNumber(formData.sell_price)}
                   onChange={(e) => setFormData({ ...formData, sell_price: parseNumber(e.target.value) })}
                    placeholder="0"
@@ -253,13 +255,55 @@ export function ProductFormModal({
                 <Label htmlFor="stock">Stok</Label>
                 <Input
                   id="stock"
-                  type="text"
-                   inputMode="numeric"
-                  value={formatNumber(formData.stock)}
-                  onChange={(e) => setFormData({ ...formData, stock: parseNumber(e.target.value) })}
-                   placeholder="0"
-                   className="placeholder:text-muted-foreground"
+                  type="hidden"
+                  value={formData.stock}
                 />
+                <div className="flex gap-2">
+                    <div className="flex-1">
+                        <Label htmlFor="stock_box" className="text-xs text-muted-foreground">Box</Label>
+                        <div className="relative">
+                            <Input
+                                id="stock_box"
+                                type="text"
+                                inputMode="numeric"
+                                value={formatNumber(Math.floor((formData.stock || 0) / (pcsPerBox || 1)))}
+                                onChange={(e) => {
+                                    const b = parseNumber(e.target.value);
+                                    const p = (formData.stock || 0) % (pcsPerBox || 1);
+                                    setFormData({ ...formData, stock: (b * (pcsPerBox || 1)) + p });
+                                }}
+                                className="placeholder:text-muted-foreground"
+                                placeholder="0"
+                            />
+                            {pcsPerBox > 1 && (
+                                <div className="absolute right-3 top-2.5 text-xs text-muted-foreground">
+                                    x{pcsPerBox}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex-1">
+                        <Label htmlFor="stock_pcs" className="text-xs text-muted-foreground">Pcs (Sisa)</Label>
+                        <Input
+                            id="stock_pcs"
+                            type="text"
+                            inputMode="numeric"
+                            value={formatNumber((formData.stock || 0) % (pcsPerBox || 1))}
+                            onChange={(e) => {
+                                const p = parseNumber(e.target.value);
+                                const b = Math.floor((formData.stock || 0) / (pcsPerBox || 1));
+                                setFormData({ ...formData, stock: (b * (pcsPerBox || 1)) + p });
+                            }}
+                            className="placeholder:text-muted-foreground"
+                            placeholder="0"
+                        />
+                    </div>
+                </div>
+                {pcsPerBox > 1 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Total: {formatNumber(formData.stock)} Pcs
+                    </p>
+                )}
               </div>
               <div>
                 <Label htmlFor="min_stock">Min Stok</Label>

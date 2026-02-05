@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- 4. Master Data: Brands
 CREATE TABLE IF NOT EXISTS brands (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL
+    name TEXT UNIQUE NOT NULL,
+    pcs_per_box INTEGER DEFAULT 24
 );
 
 -- 5. Master Data: Brand Types
@@ -206,6 +207,21 @@ export const initializeDatabase = async (): Promise<void> => {
       console.log("Migration: brand_id already exists in type_numbers. Skipping.");
     } else {
       console.error("Migration type_numbers failed:", e);
+    }
+  }
+
+
+  // 3. Migrate brands (Add pcs_per_box)
+  try {
+    console.log("Migrating: Attempting to add pcs_per_box to brands...");
+    await db.execute("ALTER TABLE brands ADD COLUMN pcs_per_box INTEGER DEFAULT 24");
+    console.log("Migration: pcs_per_box updated successfully.");
+  } catch (e: unknown) {
+    const msg = String(e).toLowerCase();
+    if (msg.includes("duplicate column") || msg.includes("exists")) {
+      console.log("Migration: pcs_per_box already exists in brands. Skipping.");
+    } else {
+      console.error("Migration brands failed:", e);
     }
   }
 };

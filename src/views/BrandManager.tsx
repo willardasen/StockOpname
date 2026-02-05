@@ -3,6 +3,7 @@ import { useAuthStore, useBrandStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Trash2, Plus, Database, Palette } from 'lucide-react';
@@ -27,6 +28,7 @@ export function BrandManager() {
   } = useBrandStore();
 
   const [newBrand, setNewBrand] = useState('');
+  const [newPcsPerBox, setNewPcsPerBox] = useState('10');
   
   // Linked Data Inputs
   const [newBrandType, setNewBrandType] = useState('');
@@ -59,9 +61,11 @@ export function BrandManager() {
   const handleAddBrand = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newBrand.trim()) {
-      const result = await addBrand(newBrand.trim());
+      const pcs = parseInt(newPcsPerBox) || 1;
+      const result = await addBrand(newBrand.trim(), pcs);
       if (result.success) {
           setNewBrand('');
+          setNewPcsPerBox('10');
       } else {
           alert(result.message || "Gagal menambah Brand");
       }
@@ -145,13 +149,33 @@ export function BrandManager() {
               <CardTitle>Daftar Brand</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form onSubmit={handleAddBrand} className="flex gap-2">
-                <Input 
-                  placeholder="Nama Brand Baru" 
-                  value={newBrand}
-                  onChange={(e) => setNewBrand(e.target.value)}
-                  className="max-w-sm"
-                />
+              <form onSubmit={handleAddBrand} className="flex gap-4 items-end">
+                <div className="grid w-full max-w-sm gap-1.5">
+                    <Label htmlFor="brand-name">Nama Brand</Label>
+                    <Input 
+                        id="brand-name"
+                        placeholder="Nama Brand Baru" 
+                        value={newBrand}
+                        onChange={(e) => setNewBrand(e.target.value)}
+                    />
+                </div>
+
+                <div className="grid gap-1.5">
+                    <Label htmlFor="pcs-input">Isi per Box</Label>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">1 Box =</span>
+                        <Input 
+                            id="pcs-input"
+                            placeholder="10" 
+                            type="number"
+                            value={newPcsPerBox}
+                            onChange={(e) => setNewPcsPerBox(e.target.value)}
+                            className="w-20"
+                        />
+                        <span className="text-sm text-muted-foreground">Pcs</span>
+                    </div>
+                </div>
+
                 <Button type="submit" disabled={isLoading || !newBrand.trim()}>
                   <Plus className="h-4 w-4 mr-2" />
                   Tambah
@@ -164,7 +188,12 @@ export function BrandManager() {
                 ) : (
                   brands.map((item) => (
                     <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <span>{item.name}</span>
+                      <div>
+                        <span className="font-medium">{item.name}</span>
+                        <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          1 Box = {item.pcs_per_box} Pcs
+                        </span>
+                      </div>
                       <Button 
                         variant="ghost" 
                         size="icon" 

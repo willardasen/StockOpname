@@ -12,7 +12,7 @@ interface MasterDataStore {
 
     loadAll: () => Promise<void>;
 
-    addBrand: (name: string) => Promise<{ success: boolean; message?: string }>;
+    addBrand: (name: string, pcsPerBox: number) => Promise<{ success: boolean; message?: string }>;
     deleteBrand: (id: number) => Promise<boolean>;
 
     addBrandType: (name: string, brandId: number) => Promise<{ success: boolean; message?: string }>;
@@ -51,7 +51,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
         }
     },
 
-    addBrand: async (name: string) => {
+    addBrand: async (name: string, pcsPerBox: number) => {
         try {
             const currentBrands = get().brands;
             if (currentBrands.some(b => b.name.toLowerCase() === name.toLowerCase())) {
@@ -59,8 +59,8 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
             }
 
             const db = await getDb();
-            console.log(`Adding Brand: ${name}`);
-            await db.execute('INSERT INTO brands (name) VALUES (?)', [name]);
+            console.log(`Adding Brand: ${name}, Pcs/Box: ${pcsPerBox}`);
+            await db.execute('INSERT INTO brands (name, pcs_per_box) VALUES (?, ?)', [name, pcsPerBox]);
             await get().loadAll();
             return { success: true };
         } catch (error) {

@@ -33,7 +33,8 @@ export function StockIn() {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantity, setQuantity] = useState<number>(0);
+  const [boxQty, setBoxQty] = useState<number>(0);
+  const [pcsQty, setPcsQty] = useState<number>(0);
   const [note, setNote] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -100,7 +101,8 @@ export function StockIn() {
     setSearchKeyword('');
     setSearchResults([]);
     setSelectedProduct(null);
-    setQuantity(0);
+    setBoxQty(0);
+    setPcsQty(0);
     setNote('');
     setShowResults(false);
   };
@@ -111,7 +113,11 @@ export function StockIn() {
       alert('Silakan pilih produk terlebih dahulu!');
       return;
     }
-    if (quantity <= 0) {
+
+    const pcsPerBox = selectedProduct.pcs_per_box || 1;
+    const totalQty = (boxQty * pcsPerBox) + pcsQty;
+
+    if (totalQty <= 0) {
       alert('Jumlah masuk harus lebih dari 0!');
       return;
     }
@@ -129,7 +135,7 @@ export function StockIn() {
       product_id: selectedProduct.id,
       user_id: user.id,
       type: 'IN',
-      qty: quantity,
+      qty: totalQty,
       note: trimmedNote
     });
 
@@ -259,27 +265,64 @@ export function StockIn() {
                 <Label>Warna</Label>
                 <Input value={selectedProduct.color || '-'} readOnly className="bg-white" />
               </div>
+
               <div className="space-y-2">
                 <Label>Stok Saat Ini</Label>
-                <Input value={formatNumber(selectedProduct.stock)} readOnly className="bg-white font-bold text-green-600" />
+                 <div className="bg-white px-3 py-2 rounded-md border font-medium">
+                    <span className="text-green-600 font-bold">{formatNumber(selectedProduct.stock)} Pcs</span>
+                    {(selectedProduct.pcs_per_box || 1) > 1 && (
+                        <span className="text-gray-500 text-xs ml-2">
+                            ({Math.floor(selectedProduct.stock / (selectedProduct.pcs_per_box || 1))} Box {selectedProduct.stock % (selectedProduct.pcs_per_box || 1)} Pcs)
+                        </span>
+                    )}
+                 </div>
               </div>
             </div>
           )}
 
-          {/* Quantity and Note */}
+            {/* Quantity and Note */}
           {selectedProduct && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="quantity">Jumlah Masuk</Label>
-                <Input
-                  id="quantity"
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  value={formatNumber(quantity)}
-                  onChange={(e) => setQuantity(parseNumber(e.target.value))}
-                  className="placeholder:text-muted-foreground"
-                />
+                 <Label>Jumlah Masuk</Label>
+                 <div className="flex gap-2">
+                     <div className="flex-1">
+                        <Label htmlFor="boxQty" className="text-xs font-medium text-gray-500">Box</Label>
+                         <div className="relative">
+                            <Input
+                                id="boxQty"
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="0"
+                                value={formatNumber(boxQty)}
+                                onChange={(e) => setBoxQty(parseNumber(e.target.value))}
+                                className="placeholder:text-muted-foreground"
+                            />
+                             {(selectedProduct.pcs_per_box || 1) > 1 && (
+                                <div className="absolute right-3 top-2.5 text-xs text-muted-foreground bg-white px-1">
+                                    x{selectedProduct.pcs_per_box}
+                                </div>
+                            )}
+                         </div>
+                    </div>
+                    <div className="flex-1">
+                        <Label htmlFor="pcsQty" className="text-xs font-medium text-gray-500">Pcs</Label>
+                        <Input
+                            id="pcsQty"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0"
+                            value={formatNumber(pcsQty)}
+                            onChange={(e) => setPcsQty(parseNumber(e.target.value))}
+                            className="placeholder:text-muted-foreground"
+                        />
+                    </div>
+                 </div>
+                 {(selectedProduct.pcs_per_box || 1) > 1 && (
+                     <p className="text-xs text-green-600 font-medium">
+                         Total: {formatNumber((boxQty * (selectedProduct.pcs_per_box || 1)) + pcsQty)} Pcs
+                     </p>
+                 )}
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="note">Catatan / Penanggung Jawab</Label>
@@ -320,9 +363,7 @@ export function StockIn() {
                 />
             </div>
              <div className="flex items-center gap-2">
-                 <select className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                     <option>Semua Gudang</option>
-                 </select>
+                 
                 <Button variant="outline">
                     <Download className="h-4 w-4 mr-2" />
                     Export
@@ -337,10 +378,9 @@ export function StockIn() {
                 <th className="px-4 py-3 font-medium">Tanggal</th>
                 <th className="px-4 py-3 font-medium">Nama Barang</th>
                 <th className="px-4 py-3 font-medium">Jenis</th>
-                <th className="px-4 py-3 font-medium">Satuan</th>
-                <th className="px-4 py-3 font-medium">Gudang</th>
                 <th className="px-4 py-3 font-medium">Penanggung Jawab</th>
-                <th className="px-4 py-3 font-medium text-right">Jumlah</th>
+                <th className="px-4 py-3 font-medium text-right">Box</th>
+                <th className="px-4 py-3 font-medium text-right">Jumlah (Pcs)</th>
                 <th className="px-4 py-3 font-medium text-center">Aksi</th>
               </tr>
             </thead>
@@ -360,10 +400,14 @@ export function StockIn() {
                   <td className="px-4 py-3 text-muted-foreground">
                     {t.brand} {t.brand_type}
                   </td>
-                  <td className="px-4 py-3">Pcs</td>
-                  <td className="px-4 py-3">Gudang Utama</td>
                   <td className="px-4 py-3 capitalize">
                     {t.note || t.username || '-'}
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium">
+                    {t.pcs_per_box && t.pcs_per_box > 1 
+                        ? new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(t.qty / t.pcs_per_box)
+                        : (t.pcs_per_box === 1 && t.qty > 0 ? t.qty : '-')
+                    }
                   </td>
                   <td className="px-4 py-3 text-right font-medium text-green-600">
                     {formatNumber(t.qty)}
@@ -387,7 +431,7 @@ export function StockIn() {
               ))}
                {recentTransactions.length === 0 && (
                   <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
+                      <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
                           Belum ada data transaksi hari ini
                       </td>
                   </tr>
