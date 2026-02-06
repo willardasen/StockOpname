@@ -1,3 +1,4 @@
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore, useProductStore } from '@/stores';
 import { useStockOpname } from '@/hooks';
 import { SearchInput } from '@/components/common';
@@ -5,11 +6,95 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCheck, Search, Save, Check, AlertTriangle } from 'lucide-react';
+import { ClipboardCheck, Search, Save, Check, AlertTriangle, Calculator, RotateCcw } from 'lucide-react';
+import { GlobalOpnameRepo, TransactionRepo, type GlobalOpnameRecord } from '@/repositories';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function StockOpname() {
-  const { isAdmin } = useAuthStore();
-  const { products, searchProducts } = useProductStore();
+  const { isAdmin, user } = useAuthStore();
+  const { products, searchProducts, totalStock, loadStats } = useProductStore();
+  
+  // Global opname state
+  const [globalPhysicalBox, setGlobalPhysicalBox] = useState(0);
+  const [globalPhysicalPcs, setGlobalPhysicalPcs] = useState(0);
+  const [opnameHistory, setOpnameHistory] = useState<GlobalOpnameRecord[]>([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [savingGlobal, setSavingGlobal] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState('');
+  
+  // Calculate total physical and difference
+  const globalPhysicalTotal = useMemo(() => 
+    ((globalPhysicalBox || 0) * 10) + (globalPhysicalPcs || 0), 
+    [globalPhysicalBox, globalPhysicalPcs]
+  );
+  const globalDifference = useMemo(() => 
+    globalPhysicalTotal - totalStock, 
+    [globalPhysicalTotal, totalStock]
+  );
+  
+  useEffect(() => {
+    loadStats();
+    loadHistory();
+  }, [loadStats]);
+  
+  
+  // Load verification history
+  const loadHistory = useCallback(async (start?: string, end?: string) => {
+    try {
+      if (start && end) {
+        const records = await GlobalOpnameRepo.getRecords(start, end);
+        setOpnameHistory(records);
+      } else {
+        const records = await GlobalOpnameRepo.getRecords();
+        setOpnameHistory(records);
+      }
+    } catch (error) {
+      console.error('Failed to load opname history:', error);
+    }
+  }, []);
+
+  const handleFilter = () => {
+    if (startDate && endDate) {
+        loadHistory(startDate, endDate);
+    }
+  };
+
+  const handleResetFilter = () => {
+    setStartDate('');
+    setEndDate('');
+    loadHistory();
+  };
+  
+  // Save today's verification
+  const handleSaveGlobalOpname = async () => {
+    setSavingGlobal(true);
+    setSaveSuccess('');
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { total_in, total_out } = await TransactionRepo.getDailyTotals(today);
+      
+      await GlobalOpnameRepo.saveRecord({
+        date: today,
+        system_stock: totalStock,
+        physical_stock: globalPhysicalTotal,
+        difference: globalDifference,
+        total_in,
+        total_out,
+        user_id: user?.id
+      });
+      
+      setSaveSuccess('Verifikasi berhasil disimpan!');
+      loadHistory();
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSaveSuccess(''), 3000);
+    } catch (error) {
+      console.error('Failed to save global opname:', error);
+    } finally {
+      setSavingGlobal(false);
+    }
+  };
   
   const {
     selectedProduct,
@@ -68,8 +153,176 @@ export function StockOpname() {
           </CardContent>
         </Card>
       )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Tabs for Grand Total vs Per Product */}
+      <Tabs defaultValue="grand-total" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="grand-total">Grand Total</TabsTrigger>
+          <TabsTrigger value="per-product">Per Produk</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="grand-total" className="space-y-6 mt-4">
+          {/* Grand Total Crosscheck */}
+          <Card className="bg-slate-50 border-slate-200 dark:border-slate-800">
+        <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+                <Calculator className="h-5 w-5 text-indigo-600" />
+                Verifikasi Grand Total
+            </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+            {/* System Stock Display */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div className="space-y-2">
+                    <Label className="text-muted-foreground">Total Stok Sistem</Label>
+                    <div className="text-2xl font-bold font-mono">
+                        {new Intl.NumberFormat('id-ID').format(totalStock)} Pcs
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                        ({Math.floor(totalStock / 10)} Box {totalStock % 10} Pcs)
+                    </p>
+                </div>
+                
+                {/* Physical Input - Box */}
+                <div className="space-y-2">
+                    <Label htmlFor="physicalBox">Input Fisik (Box)</Label>
+                    <Input 
+                        id="physicalBox"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        className="font-mono"
+                        value={globalPhysicalBox}
+                        onChange={(e) => setGlobalPhysicalBox(parseInt(e.target.value))}
+                    />
+                </div>
+                
+                {/* Physical Input - Pcs */}
+                <div className="space-y-2">
+                    <Label htmlFor="physicalPcs">Input Fisik (Pcs)</Label>
+                    <Input 
+                        id="physicalPcs"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        className="font-mono"
+                        value={globalPhysicalPcs}
+                        onChange={(e) => setGlobalPhysicalPcs(parseInt(e.target.value))}
+                    />
+                </div>
+                
+                {/* Difference Display */}
+                <div className="space-y-1 p-4 rounded-lg bg-white border dark:bg-black/20">
+                    <Label className="text-muted-foreground">Selisih</Label>
+                    <div className={`text-2xl font-bold font-mono ${
+                        globalDifference === 0 ? 'text-green-600' : 
+                        globalDifference > 0 ? 'text-blue-600' : 'text-red-600'
+                    }`}>
+                        {globalDifference > 0 ? '+' : ''}{new Intl.NumberFormat('id-ID').format(globalDifference)}
+                    </div>
+                    <p className={`text-xs ${
+                        globalDifference === 0 ? 'text-green-600' : 
+                        globalDifference > 0 ? 'text-blue-600' : 'text-red-600'
+                    }`}>
+                        {globalDifference === 0 ? 'Cocok' : globalDifference > 0 ? 'Lebih' : 'Kurang'}
+                    </p>
+                </div>
+            </div>
+            
+            {/* Save Button */}
+            <div className="flex justify-end gap-2">
+                <Button 
+                    onClick={handleSaveGlobalOpname}
+                    disabled={savingGlobal}
+                    className="gap-2"
+                >
+                    <Save className="h-4 w-4" />
+                    Simpan Verifikasi Hari Ini
+                </Button>
+            </div>
+            
+            {saveSuccess && (
+                <p className="text-green-600 text-sm text-right">{saveSuccess}</p>
+            )}
+        </CardContent>
+      </Card>
+      
+      {/* History Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardCheck className="h-5 w-5" />
+                Riwayat Verifikasi
+            </CardTitle>
+            <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Dari:</span>
+                    <Input 
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-auto"
+                    />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Sampai:</span>
+                    <Input 
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-auto"
+                    />
+                </div>
+                <Button variant="secondary" size="sm" onClick={handleFilter} title="Filter Tanggal">
+                    <Search className="h-4 w-4" />
+                </Button>
+                 <Button variant="outline" size="sm" onClick={handleResetFilter} title="Tampilkan Semua">
+                    <RotateCcw className="h-4 w-4" />
+                </Button>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <div className="rounded-md border bg-white overflow-hidden shadow-sm ">
+                <table className="w-full text-sm">
+                    <thead className="bg-[#435585] text-white">
+                        <tr>
+                            <th className="px-4 py-3 text-left font-medium">Tanggal</th>
+                            <th className="px-4 py-3 text-right font-medium">Stok Sistem</th>
+                            <th className="px-4 py-3 text-right font-medium">Stok Fisik</th>
+                            <th className="px-4 py-3 text-right font-medium">Selisih</th>
+                            <th className="px-4 py-3 text-right font-medium">Total IN</th>
+                            <th className="px-4 py-3 text-right font-medium">Total OUT</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                        {opnameHistory.map((record) => (
+                            <tr key={record.id} className="hover:bg-muted/30">
+                                <td className="px-4 py-3">{record.date}</td>
+                                <td className="px-4 py-3 text-right font-mono">{new Intl.NumberFormat('id-ID').format(record.system_stock)}</td>
+                                <td className="px-4 py-3 text-right font-mono">{new Intl.NumberFormat('id-ID').format(record.physical_stock)}</td>
+                                <td className={`px-4 py-3 text-right font-mono font-medium ${
+                                    record.difference === 0 ? 'text-green-600' :
+                                    record.difference > 0 ? 'text-blue-600' : 'text-red-600'
+                                }`}>
+                                    {record.difference > 0 ? '+' : ''}{new Intl.NumberFormat('id-ID').format(record.difference)}
+                                </td>
+                                <td className="px-4 py-3 text-right font-mono text-green-600">+{new Intl.NumberFormat('id-ID').format(record.total_in)}</td>
+                                <td className="px-4 py-3 text-right font-mono text-red-600">-{new Intl.NumberFormat('id-ID').format(record.total_out)}</td>
+                            </tr>
+                        ))}
+                        {opnameHistory.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                                    Belum ada data verifikasi
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </CardContent>
+      </Card>
+        </TabsContent>
+        
+        <TabsContent value="per-product" className="space-y-6 mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Search Panel */}
         <Card>
           <CardHeader>
@@ -237,6 +490,8 @@ export function StockOpname() {
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -196,6 +196,17 @@ export const ProductRepo = {
     },
 
     /**
+     * Get total stock quantity (Sum of all stocks)
+     */
+    async getTotalStock(): Promise<number> {
+        const db = await getDb();
+        const result = await db.select<{ total: number }[]>(
+            "SELECT COALESCE(SUM(stock), 0) as total FROM products WHERE is_active = 1"
+        );
+        return result[0].total;
+    },
+
+    /**
      * Get total asset value (Admin only)
      * Sum of (stock * buy_price) for all products
      */

@@ -114,7 +114,7 @@ export const Login = () => {
 
             <div className="mt-8 flex justify-center">
                 <div className="px-4 py-2 bg-muted/50 rounded-full border border-border text-xs text-muted-foreground font-mono">
-                    Default: admin / admin123
+                    Default: user / password123
                 </div>
             </div>
         </CardContent>

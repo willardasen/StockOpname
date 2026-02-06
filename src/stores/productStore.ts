@@ -7,6 +7,7 @@ interface ProductState {
     selectedProduct: Product | null;
     lowStockProducts: Product[];
     totalCount: number;
+    totalStock: number;
     totalAssetValue: number;
     isLoading: boolean;
     error: string | null;
@@ -29,6 +30,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
     selectedProduct: null,
     lowStockProducts: [],
     totalCount: 0,
+    totalStock: 0,
     totalAssetValue: 0,
     isLoading: false,
     error: null,
@@ -81,8 +83,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
     loadStats: async () => {
         try {
             const totalCount = await ProductRepo.getProductCount();
+            const totalStock = await ProductRepo.getTotalStock();
             const totalAssetValue = await ProductRepo.getTotalAssetValue();
-            set({ totalCount, totalAssetValue });
+            set({ totalCount, totalStock, totalAssetValue });
         } catch (error) {
             console.error('Failed to load stats:', error);
         }

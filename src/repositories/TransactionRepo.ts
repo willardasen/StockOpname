@@ -256,5 +256,30 @@ export const TransactionRepo = {
         await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
 
         return true;
+    },
+
+    /**
+     * Get daily IN/OUT totals for a specific date
+     */
+    async getDailyTotals(date: string): Promise<{ total_in: number; total_out: number }> {
+        const db = await getDb();
+
+        const results = await db.select<{ type: string; total: number }[]>(
+            `SELECT type, COALESCE(SUM(qty), 0) as total 
+             FROM transactions 
+             WHERE DATE(created_at) = ? AND type IN ('IN', 'OUT')
+             GROUP BY type`,
+            [date]
+        );
+
+        let total_in = 0;
+        let total_out = 0;
+
+        for (const row of results) {
+            if (row.type === 'IN') total_in = row.total;
+            if (row.type === 'OUT') total_out = row.total;
+        }
+
+        return { total_in, total_out };
     }
 };

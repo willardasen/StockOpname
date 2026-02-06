@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS brands (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
-    pcs_per_box INTEGER DEFAULT 24
+    pcs_per_box INTEGER DEFAULT 10
 );
 
 -- 5. Master Data: Brand Types
@@ -81,6 +81,21 @@ CREATE TABLE IF NOT EXISTS type_numbers (
 CREATE TABLE IF NOT EXISTS colors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL
+);
+
+-- 8. Global Opname Records (Daily Verification)
+CREATE TABLE IF NOT EXISTS global_opname (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL UNIQUE,
+    system_stock INTEGER NOT NULL,
+    physical_stock INTEGER NOT NULL,
+    difference INTEGER NOT NULL,
+    total_in INTEGER DEFAULT 0,
+    total_out INTEGER DEFAULT 0,
+    note TEXT,
+    user_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
 );
 `;
 
