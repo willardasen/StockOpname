@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { History, Download, Filter } from 'lucide-react';
+import { History, Download, Filter, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { exportToExcel } from '@/utils/excel';
 import type { TransactionType } from '@/types/database';
@@ -15,6 +15,19 @@ export function TransactionHistory() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [filterType, setFilterType] = useState<TransactionType | ''>('');
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  // Filter transactions by search keyword (client-side)
+  const filteredTransactions = transactions.filter(tx => {
+    if (!searchKeyword.trim()) return true;
+    const keyword = searchKeyword.toLowerCase();
+    return (
+      tx.product_name?.toLowerCase().includes(keyword) ||
+      tx.username?.toLowerCase().includes(keyword) ||
+      tx.note?.toLowerCase().includes(keyword) ||
+      tx.type?.toLowerCase().includes(keyword)
+    );
+  });
 
   useEffect(() => {
     loadTransactions();
@@ -63,7 +76,7 @@ export function TransactionHistory() {
             Riwayat Transaksi
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {transactions.length} transaksi ditemukan
+            {filteredTransactions.length} transaksi ditemukan
           </p>
         </div>
         <Button onClick={handleExport} variant="outline">
@@ -82,6 +95,20 @@ export function TransactionHistory() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-4 items-end">
+            {/* Search Bar */}
+            <div className="space-y-2 flex-1 min-w-[200px]">
+              <Label>Cari</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Cari produk, user, catatan..."
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Tanggal Mulai</Label>
               <Input
@@ -136,7 +163,7 @@ export function TransactionHistory() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {transactions.map((tx) => (
+                {filteredTransactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 text-sm">
                       {format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm')}
@@ -159,7 +186,7 @@ export function TransactionHistory() {
                     </td>
                   </tr>
                 ))}
-                {transactions.length === 0 && (
+                {filteredTransactions.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
                       Tidak ada transaksi ditemukan
