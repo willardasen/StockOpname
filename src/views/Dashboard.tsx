@@ -114,7 +114,7 @@ export function Dashboard() {
             ) : (
               <div className="space-y-3">
                 {recentTransactions.map((tx) => (
-                  <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-200">
                     <div className="flex items-center gap-3">
                       {tx.type === 'IN' ? (
                         <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">

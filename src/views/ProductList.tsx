@@ -88,17 +88,11 @@ export function ProductList() {
       width: 120,
       render: (value: unknown, row: Product) => {
         const stock = value as number;
-        const pcsPerBox = row.pcs_per_box || 1;
         const isLow = stock <= row.min_stock;
         
         return (
           <div className={isLow ? 'text-red-600 font-bold' : ''}>
              <div>{stock} Pcs</div>
-             {pcsPerBox > 1 && (
-                 <div className="text-xs text-gray-500 font-normal">
-                     {Math.floor(stock / pcsPerBox)} Box {stock % pcsPerBox} Pcs
-                 </div>
-             )}
           </div>
         );
       }

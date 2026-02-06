@@ -381,7 +381,10 @@ export function StockOut() {
               <tr>
                 <th className="px-4 py-3 font-medium">Tanggal</th>
                 <th className="px-4 py-3 font-medium">Nama Barang</th>
-                <th className="px-4 py-3 font-medium">Jenis</th>
+                <th className="px-4 py-3 font-medium">Brand</th>
+                <th className="px-4 py-3 font-medium">Tipe</th>
+                <th className="px-4 py-3 font-medium">No Tipe</th>
+                <th className="px-4 py-3 font-medium">Warna</th>
                 <th className="px-4 py-3 font-medium">Penanggung Jawab</th>
                 <th className="px-4 py-3 font-medium text-right">Box</th>
                 <th className="px-4 py-3 font-medium text-right">Jumlah (Pcs)</th>
@@ -401,9 +404,10 @@ export function StockOut() {
                     {format(new Date(t.created_at), 'dd/MM/yyyy')}
                   </td>
                   <td className="px-4 py-3 font-medium">{t.product_name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {t.brand} {t.brand_type}
-                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">{t.brand || '-'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{t.brand_type || '-'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{t.type_number || '-'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{t.color || '-'}</td>
                   <td className="px-4 py-3 capitalize">
                     {t.note || t.username || '-'}
                   </td>
@@ -435,7 +439,7 @@ export function StockOut() {
               ))}
                {recentTransactions.length === 0 && (
                   <tr>
-                      <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
+                      <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">
                           Belum ada data transaksi hari ini
                       </td>
                   </tr>
