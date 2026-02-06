@@ -3,6 +3,7 @@ import { getDb } from "./db";
 export interface GlobalOpnameRecord {
     id: number;
     date: string;
+    brand?: string;
     system_stock: number;
     physical_stock: number;
     difference: number;
@@ -15,6 +16,7 @@ export interface GlobalOpnameRecord {
 
 export interface CreateGlobalOpnameInput {
     date: string;
+    brand?: string;
     system_stock: number;
     physical_stock: number;
     difference: number;
@@ -34,10 +36,11 @@ export const GlobalOpnameRepo = {
         // Use INSERT OR REPLACE to update if date exists
         await db.execute(
             `INSERT OR REPLACE INTO global_opname 
-             (date, system_stock, physical_stock, difference, total_in, total_out, note, user_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (date, brand, system_stock, physical_stock, difference, total_in, total_out, note, user_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 input.date,
+                input.brand || null,
                 input.system_stock,
                 input.physical_stock,
                 input.difference,

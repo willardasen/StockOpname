@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuthStore, useTransactionStore } from '@/stores';
 import type { Product } from '@/types/database';
 
@@ -7,13 +7,25 @@ export function useStockOpname() {
     const { adjustStock, isLoading: txLoading, error } = useTransactionStore();
 
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [physicalCount, setPhysicalCount] = useState<string>('');
+    const [physicalBox, setPhysicalBox] = useState<number>(0);
+    const [physicalPcs, setPhysicalPcs] = useState<number>(0);
     const [note, setNote] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
+    // Get pcs_per_box from selected product (fallback to 10)
+    const pcsPerBox = useMemo(() => {
+        return selectedProduct?.pcs_per_box || 10;
+    }, [selectedProduct]);
+
+    // Calculate total physical count
+    const physicalCount = useMemo(() => {
+        return (physicalBox * pcsPerBox) + physicalPcs;
+    }, [physicalBox, physicalPcs, pcsPerBox]);
+
     const selectProduct = (product: Product) => {
         setSelectedProduct(product);
-        setPhysicalCount('');
+        setPhysicalBox(0);
+        setPhysicalPcs(0);
         setNote('');
         setSuccessMessage('');
     };
@@ -23,20 +35,19 @@ export function useStockOpname() {
 
         if (!selectedProduct || !user) return;
 
-        const physical = parseInt(physicalCount, 10);
-        if (isNaN(physical) || physical < 0) {
+        if (physicalCount < 0) {
             return;
         }
 
         const success = await adjustStock({
             product_id: selectedProduct.id,
             user_id: user.id,
-            physical_count: physical,
+            physical_count: physicalCount,
             note: note || undefined,
         });
 
         if (success) {
-            const diff = physical - selectedProduct.stock;
+            const diff = physicalCount - selectedProduct.stock;
             let message = 'Stok berhasil disesuaikan!';
             if (diff > 0) {
                 message = `Stok berhasil disesuaikan! Lebih ${diff}`;
@@ -47,22 +58,26 @@ export function useStockOpname() {
             }
             setSuccessMessage(message);
             setSelectedProduct(null);
-            setPhysicalCount('');
+            setPhysicalBox(0);
+            setPhysicalPcs(0);
             setNote('');
         }
     };
 
     const calculateDifference = () => {
-        if (!selectedProduct || physicalCount === '') return null;
-        const physical = parseInt(physicalCount, 10);
-        if (isNaN(physical)) return null;
-        return physical - selectedProduct.stock;
+        if (!selectedProduct) return null;
+        if (physicalBox === 0 && physicalPcs === 0) return null;
+        return physicalCount - selectedProduct.stock;
     };
 
     return {
         selectedProduct,
+        physicalBox,
+        setPhysicalBox,
+        physicalPcs,
+        setPhysicalPcs,
         physicalCount,
-        setPhysicalCount,
+        pcsPerBox,
         note,
         setNote,
         successMessage,

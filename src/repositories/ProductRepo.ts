@@ -232,5 +232,28 @@ export const ProductRepo = {
         );
 
         return result.rowsAffected > 0;
+    },
+
+    /**
+     * Get total stock and pcs_per_box for a specific brand
+     */
+    async getStockByBrand(brandName: string): Promise<{ totalStock: number; pcsPerBox: number }> {
+        const db = await getDb();
+
+        // Get pcs_per_box from brands table
+        const brandResult = await db.select<{ pcs_per_box: number }[]>(
+            "SELECT pcs_per_box FROM brands WHERE name = ?",
+            [brandName]
+        );
+        const pcsPerBox = brandResult.length > 0 ? (brandResult[0].pcs_per_box || 10) : 10;
+
+        // Get total stock for products of this brand
+        const stockResult = await db.select<{ total: number }[]>(
+            "SELECT COALESCE(SUM(stock), 0) as total FROM products WHERE is_active = 1 AND brand = ?",
+            [brandName]
+        );
+        const totalStock = stockResult[0].total;
+
+        return { totalStock, pcsPerBox };
     }
 };

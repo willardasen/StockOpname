@@ -106,23 +106,6 @@ export function SalesReport() {
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-auto"
             />
-            
-            {/* Quick select buttons */}
-            <div className="flex gap-2 ml-4">
-              {quickMonths.slice(0, 4).map((m) => (
-                <Button
-                  key={m.value}
-                  variant={selectedMonth === m.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setSelectedMonth(m.value);
-                    loadSalesData(m.value);
-                  }}
-                >
-                  {m.label}
-                </Button>
-              ))}
-            </div>
           </div>
         </CardContent>
       </Card>
