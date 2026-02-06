@@ -162,6 +162,37 @@ export const initializeDatabase = async (): Promise<void> => {
     console.log('Default admin user check/creation completed');
   }
 
+  // Check if standard 'user' exists (requested by user)
+  const standardUsers = await db.select<{ count: number }[]>(
+    "SELECT COUNT(*) as count FROM users WHERE username = 'user'"
+  );
+
+  if (standardUsers[0].count === 0) {
+    const DEFAULT_USER_PASSWORD = 'password123';
+    let hashedPassword = DEFAULT_USER_PASSWORD;
+
+    const isTauri = typeof window !== 'undefined' && (
+      !!(window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ ||
+      !!(window as unknown as { __TAURI__: unknown }).__TAURI__
+    );
+
+    if (isTauri) {
+      try {
+        hashedPassword = await invoke<string>('hash_password', {
+          password: DEFAULT_USER_PASSWORD
+        });
+      } catch (e) {
+        console.error("Failed to hash user password:", e);
+      }
+    }
+
+    await db.execute(
+      "INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)",
+      ['user', hashedPassword, 'staff']
+    );
+    console.log("Default 'user' account created with role 'staff'");
+  }
+
   // AUTO-FIX: Check if admin password is still plaintext 'admin123' (caused by previous bug)
   const adminUser = await db.select<{ id: number, password: string }[]>(
     "SELECT id, password FROM users WHERE username = 'admin'"

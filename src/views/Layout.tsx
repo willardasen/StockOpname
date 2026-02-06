@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   PackagePlus,
-  PackageMinus
+  PackageMinus,
+  TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -54,6 +55,7 @@ export function Layout() {
     { path: '/stock-out', icon: PackageMinus, label: 'Stok Keluar' },
     { path: '/stock-opname', icon: ClipboardCheck, label: 'Stock Opname' },
     { path: '/transactions', icon: History, label: 'Transaksi' },
+    { path: '/sales-report', icon: TrendingUp, label: 'Laporan Penjualan' },
     ...(isAdmin() ? [{ path: '/brand', icon: Database, label: 'Brand' }] : []),
   ];
 

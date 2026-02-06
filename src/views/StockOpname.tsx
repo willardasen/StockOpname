@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCheck, Search, Save, Check, AlertTriangle, Calculator, RotateCcw } from 'lucide-react';
+import { ClipboardCheck, Search, Save, Check, AlertTriangle, Calculator, RotateCcw, Filter } from 'lucide-react';
 import { GlobalOpnameRepo, TransactionRepo, type GlobalOpnameRecord } from '@/repositories';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -175,10 +175,10 @@ export function StockOpname() {
                 <div className="space-y-2">
                     <Label className="text-muted-foreground">Total Stok Sistem</Label>
                     <div className="text-2xl font-bold font-mono">
-                        {new Intl.NumberFormat('id-ID').format(totalStock)} Pcs
+                        {new Intl.NumberFormat('id-ID').format(Math.floor(totalStock / 10))} Box
                     </div>
                     <p className="text-sm text-muted-foreground">
-                        ({Math.floor(totalStock / 10)} Box {totalStock % 10} Pcs)
+                        + {totalStock % 10} Pcs (Total: {new Intl.NumberFormat('id-ID').format(totalStock)} Pcs)
                     </p>
                 </div>
                 
@@ -271,8 +271,11 @@ export function StockOpname() {
                     />
                 </div>
                 <Button variant="secondary" size="sm" onClick={handleFilter} title="Filter Tanggal">
-                    <Search className="h-4 w-4" />
+                    <Filter className="h-4 w-4" />
+                    Terapkan Filter
                 </Button>
+                
+                
                  <Button variant="outline" size="sm" onClick={handleResetFilter} title="Tampilkan Semua">
                     <RotateCcw className="h-4 w-4" />
                 </Button>

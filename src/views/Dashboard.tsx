@@ -8,7 +8,7 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
-import { useProductStore, useTransactionStore } from '@/stores';
+import { useProductStore, useTransactionStore, useAuthStore } from '@/stores';
 
 // Helper to format number with Indonesian locale (dots for thousands)
 const formatNumber = (num: number): string => {
@@ -26,6 +26,7 @@ const formatCurrency = (num: number): string => {
 };
 
 export function Dashboard() {
+  const { isAdmin } = useAuthStore();
   const { 
     totalCount, 
     totalAssetValue, 
@@ -58,7 +59,8 @@ export function Dashboard() {
       value: formatCurrency(totalAssetValue),
       icon: TrendingUp,
       color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-900/30'
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+      adminOnly: true
     },
     {
       title: 'Stok Menipis',
@@ -67,7 +69,8 @@ export function Dashboard() {
       color: 'text-orange-600',
       bgColor: 'bg-orange-100 dark:bg-orange-900/30'
     }
-  ];
+  ].filter(stat => !stat.adminOnly || isAdmin());
+
 
   return (
     <div className="space-y-6">

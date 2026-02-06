@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { PackagePlus, Search, RotateCcw, Save, Trash2, Pencil, Download } from 'lucide-react';
+import { PackagePlus, Search, RotateCcw, Save, Trash2, Pencil, Download, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTransactionStore, useAuthStore } from '@/stores';
 import { ProductRepo, TransactionRepo } from '@/repositories';
@@ -42,6 +42,8 @@ export function StockIn() {
   // Table state
   const [recentTransactions, setRecentTransactions] = useState<TransactionWithProduct[]>([]);
   const [tableSearch, setTableSearch] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Confirm Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -59,15 +61,32 @@ export function StockIn() {
   };
 
   // Load recent transactions
-  const loadTransactions = useCallback(async () => {
+  const loadTransactions = useCallback(async (start?: string, end?: string) => {
     try {
-      // Fetch recent IN transactions
-      const data = await TransactionRepo.getTransactionHistory(undefined, undefined, 'IN');
+      let data;
+      if (start && end) {
+         data = await TransactionRepo.getTransactionsByDateRange(start, end, 'IN');
+      } else {
+         // Fetch recent IN transactions
+         data = await TransactionRepo.getTransactionHistory(undefined, undefined, 'IN');
+      }
       setRecentTransactions(data);
     } catch (error) {
       console.error("Failed to load transactions", error);
     }
   }, []);
+
+  const handleFilter = () => {
+    if (startDate && endDate) {
+        loadTransactions(startDate, endDate);
+    }
+  };
+
+  const handleResetFilter = () => {
+    setStartDate('');
+    setEndDate('');
+    loadTransactions();
+  };
 
   useEffect(() => {
     loadTransactions();
@@ -363,8 +382,29 @@ export function StockIn() {
                 />
             </div>
              <div className="flex items-center gap-2">
-                 
-                <Button variant="outline">
+                 <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Dari:</span>
+                    <Input 
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="w-auto h-9"
+                    />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">Sampai:</span>
+                    <Input 
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="w-auto h-9"
+                    />
+                </div>
+                <Button variant="secondary" size="sm" onClick={handleFilter} title="Filter Tanggal">
+                    <Filter className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleResetFilter} title="Reset Filter">
+                    <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm">
                     <Download className="h-4 w-4 mr-2" />
                     Export
                 </Button>

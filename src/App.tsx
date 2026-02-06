@@ -14,6 +14,7 @@ const TransactionHistory = lazy(() => import('@/views/TransactionHistory').then(
 const BrandManager = lazy(() => import('@/views/BrandManager').then(module => ({ default: module.BrandManager })));
 const StockIn = lazy(() => import('@/views/StockIn').then(module => ({ default: module.StockIn })));
 const StockOut = lazy(() => import('@/views/StockOut').then(module => ({ default: module.StockOut })));
+const SalesReport = lazy(() => import('@/views/SalesReport').then(module => ({ default: module.SalesReport })));
 import './App.css';
 
 function App() {
@@ -101,6 +102,7 @@ function App() {
             <Route path="stock-out" element={<StockOut />} />
             <Route path="stock-opname" element={<StockOpname />} />
             <Route path="transactions" element={<TransactionHistory />} />
+            <Route path="sales-report" element={<SalesReport />} />
             <Route path="brand" element={<BrandManager />} />
           </Route>
 

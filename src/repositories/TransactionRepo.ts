@@ -181,18 +181,28 @@ export const TransactionRepo = {
     /**
      * Get transactions by date range
      */
-    async getTransactionsByDateRange(startDate: string, endDate: string): Promise<TransactionWithProduct[]> {
+    async getTransactionsByDateRange(startDate: string, endDate: string, type?: TransactionType): Promise<TransactionWithProduct[]> {
         const db = await getDb();
-        return db.select<TransactionWithProduct[]>(
-            `SELECT t.*, p.name as product_name, p.brand, p.brand_type, p.type_number, p.color, b.pcs_per_box, u.username 
-             FROM transactions t
-             LEFT JOIN products p ON t.product_id = p.id
-             LEFT JOIN brands b ON p.brand = b.name
-             LEFT JOIN users u ON t.user_id = u.id
-             WHERE DATE(t.created_at) BETWEEN ? AND ?
-             ORDER BY t.created_at DESC`,
-            [startDate, endDate]
-        );
+
+        let query = `
+            SELECT t.*, p.name as product_name, p.brand, p.brand_type, p.type_number, p.color, b.pcs_per_box, u.username 
+            FROM transactions t
+            LEFT JOIN products p ON t.product_id = p.id
+            LEFT JOIN brands b ON p.brand = b.name
+            LEFT JOIN users u ON t.user_id = u.id
+            WHERE DATE(t.created_at) BETWEEN ? AND ?
+        `;
+
+        const params: (string | number)[] = [startDate, endDate];
+
+        if (type) {
+            query += " AND t.type = ?";
+            params.push(type);
+        }
+
+        query += " ORDER BY t.created_at DESC";
+
+        return db.select<TransactionWithProduct[]>(query, params);
     },
 
     /**
@@ -281,5 +291,44 @@ export const TransactionRepo = {
         }
 
         return { total_in, total_out };
+    },
+
+    /**
+     * Get monthly sales report (top selling products by month)
+     * Returns aggregated OUT transactions grouped by product for a given year-month
+     */
+    async getMonthlySalesReport(yearMonth: string): Promise<{
+        product_id: number;
+        product_name: string;
+        brand: string;
+        brand_type: string;
+        type_number: string;
+        color: string;
+        total_qty_out: number;
+        total_qty_in: number;
+        transaction_count: number;
+    }[]> {
+        const db = await getDb();
+
+        return db.select(
+            `SELECT 
+                t.product_id,
+                p.name as product_name,
+                p.brand,
+                p.brand_type,
+                p.type_number,
+                p.color,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'OUT' THEN t.qty ELSE 0 END), 0) AS INTEGER) as total_qty_out,
+                CAST(COALESCE(SUM(CASE WHEN t.type = 'IN' THEN t.qty ELSE 0 END), 0) AS INTEGER) as total_qty_in,
+                COUNT(t.id) as transaction_count
+             FROM transactions t
+             LEFT JOIN products p ON t.product_id = p.id
+             WHERE t.type IN ('IN', 'OUT')
+               AND strftime('%Y-%m', t.created_at) = ?
+             GROUP BY t.product_id
+             HAVING total_qty_out > 0 OR total_qty_in > 0
+             ORDER BY total_qty_out DESC`,
+            [yearMonth]
+        );
     }
 };
