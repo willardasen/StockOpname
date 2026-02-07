@@ -40,7 +40,7 @@ export const AuthRepo = {
     },
 
     /**
-     * Create new user (Admin only)
+     * Create new user
      * Password is hashed in Rust backend
      */
     async createUser(input: CreateUserInput): Promise<User> {
@@ -53,13 +53,13 @@ export const AuthRepo = {
 
         // Insert user
         const result = await db.execute(
-            "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-            [input.username, hashedPassword, input.role]
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            [input.username, hashedPassword]
         );
 
         // Return created user
         const users = await db.select<User[]>(
-            "SELECT id, username, role, created_at FROM users WHERE id = ?",
+            "SELECT id, username, created_at FROM users WHERE id = ?",
             [result.lastInsertId]
         );
 
@@ -73,7 +73,7 @@ export const AuthRepo = {
         const db = await getDb();
 
         const users = await db.select<User[]>(
-            "SELECT id, username, role, created_at FROM users WHERE id = ?",
+            "SELECT id, username, created_at FROM users WHERE id = ?",
             [id]
         );
 
@@ -81,13 +81,13 @@ export const AuthRepo = {
     },
 
     /**
-     * Get all users (Admin only)
+     * Get all users
      */
     async getAllUsers(): Promise<User[]> {
         const db = await getDb();
 
         return db.select<User[]>(
-            "SELECT id, username, role, created_at FROM users ORDER BY created_at DESC"
+            "SELECT id, username, created_at FROM users ORDER BY created_at DESC"
         );
     },
 
@@ -106,7 +106,7 @@ export const AuthRepo = {
     },
 
     /**
-     * Delete user (Admin only, cannot delete self)
+     * Delete user (cannot delete self)
      */
     async deleteUser(id: number): Promise<boolean> {
         const db = await getDb();

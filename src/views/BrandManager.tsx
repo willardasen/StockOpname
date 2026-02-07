@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuthStore, useBrandStore } from '@/stores';
+import { useBrandStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,6 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Trash2, Plus, Database, Palette } from 'lucide-react';
 
 export function BrandManager() {
-  const { isAdmin } = useAuthStore();
   const { 
     brands, 
     brandTypes, 
@@ -112,10 +111,6 @@ export function BrandManager() {
               alert(result.message || "Gagal menambah Warna");
           }
       }
-  }
-
-  if (!isAdmin()) {
-    return <div className="p-4 text-center">Akses ditolak. Halaman ini khusus admin.</div>;
   }
 
   const selectClass = "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-w-xs";

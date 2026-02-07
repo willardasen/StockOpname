@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCheck, Search, Save, Check, AlertTriangle, Calculator, RotateCcw, Filter } from 'lucide-react';
+import { ClipboardCheck, Search, Save, Check, Calculator, RotateCcw, Filter } from 'lucide-react';
 import { GlobalOpnameRepo, TransactionRepo, ProductRepo, type GlobalOpnameRecord } from '@/repositories';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export function StockOpname() {
-  const { isAdmin, user } = useAuthStore();
+  const { user } = useAuthStore();
   const { products, searchProducts, loadProducts } = useProductStore();
   const { brands, loadAll: loadBrands } = useBrandStore();
   
@@ -173,18 +173,7 @@ export function StockOpname() {
         </p>
       </div>
 
-      {/* Info Alert for Staff */}
-      {!isAdmin() && (
-        <Card className="border-yellow-300 bg-yellow-50 dark:bg-yellow-900/10">
-          <CardContent className="flex items-center gap-3 py-4">
-            <AlertTriangle className="h-5 w-5 text-yellow-600" />
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              <strong>Mode Blind Count:</strong> Stok sistem disembunyikan. 
-              Silakan hitung stok fisik tanpa melihat angka sistem.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Success Message */}
       {successMessage && (
@@ -428,9 +417,9 @@ export function StockOpname() {
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-500">Stok Sistem</p>
-                      {/* Blind Count: Hide stock from staff */}
+                      {/* System stock - visible to all */}
                       <p className="font-bold text-lg">
-                        {isAdmin() ? product.stock : '???'}
+                        {product.stock}
                       </p>
                     </div>
                   </div>
@@ -469,7 +458,7 @@ export function StockOpname() {
                     <div>
                       <p className="text-xs text-gray-500">Stok Sistem</p>
                       <p className="font-bold text-xl">
-                        {isAdmin() ? selectedProduct.stock : '???'}
+                        {selectedProduct.stock}
                       </p>
                     </div>
                     <div>

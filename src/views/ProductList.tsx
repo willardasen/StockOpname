@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useAuthStore, useProductStore } from '@/stores';
+import { useProductStore } from '@/stores';
 import { useProductForm } from '@/hooks';
 import { VirtualTable, SearchInput, ProductFormModal } from '@/components/common';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -8,7 +8,6 @@ import { Plus, Package, Pencil, Trash2 } from 'lucide-react';
 import type { Product } from '@/types/database';
 
 export function ProductList() {
-  const { isAdmin } = useAuthStore();
   const { 
     products, 
     isLoading,
@@ -54,20 +53,6 @@ export function ProductList() {
     { key: 'type_number' as const, header: 'No. Tipe', width: 90 },
     { key: 'color' as const, header: 'Warna', width: 70 },
     { 
-      key: 'buy_price' as const, 
-      header: 'Harga Beli', 
-      width: 120,
-      adminOnly: true,
-      render: (value: unknown) => formatCurrency(value as number)
-    },
-    { 
-      key: 'sell_price' as const, 
-      header: 'Harga Jual', 
-      width: 110,
-      adminOnly: true,
-      render: (value: unknown) => formatCurrency(value as number)
-    },
-    { 
       key: 'box_quantity', 
       header: 'Box', 
       width: 80, 
@@ -98,12 +83,11 @@ export function ProductList() {
       }
     },
     { key: 'min_stock' as const, header: 'Min Stok', width: 70 },
-    // Action column (admin only)
+    // Action column
     {
       key: 'actions' as const,
       header: 'Aksi',
       width: 100,
-      adminOnly: true,
       render: (_value: unknown, row: Product) => (
         <div className="flex items-center gap-1">
           <Button
@@ -136,14 +120,6 @@ export function ProductList() {
     },
   ];
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(value);
-  };
-
   const handleSearch = (keyword: string) => {
     searchProducts(keyword);
   };
@@ -162,12 +138,10 @@ export function ProductList() {
             {products.length} produk ditemukan
           </p>
         </div>
-        {isAdmin() && (
-          <Button onClick={handleAddNew} variant="outline">
-            <Plus className="mr-2 h-4 w-4" />
-            Tambah Produk
-          </Button>
-        )}
+        <Button onClick={handleAddNew} variant="outline">
+          <Plus className="mr-2 h-4 w-4" />
+          Tambah Produk
+        </Button>
       </div>
 
       {/* Search */}
@@ -181,7 +155,6 @@ export function ProductList() {
       <VirtualTable
         data={products}
         columns={columns}
-        isAdmin={isAdmin()}
         highlightLowStock={true}
         emptyMessage="Tidak ada produk ditemukan"
       />
@@ -211,4 +184,3 @@ export function ProductList() {
     </div>
   );
 }
-

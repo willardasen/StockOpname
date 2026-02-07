@@ -19,7 +19,7 @@ import {
 import { useState } from 'react';
 
 export function Layout() {
-  const { user, isAdmin, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -56,7 +56,7 @@ export function Layout() {
     { path: '/stock-opname', icon: ClipboardCheck, label: 'Stock Opname' },
     { path: '/transactions', icon: History, label: 'Transaksi' },
     { path: '/sales-report', icon: TrendingUp, label: 'Laporan Penjualan' },
-    ...(isAdmin() ? [{ path: '/brand', icon: Database, label: 'Brand' }] : []),
+    { path: '/brand', icon: Database, label: 'Brand' },
   ];
 
   return (
@@ -86,16 +86,7 @@ export function Layout() {
         <div className="px-6 py-6">
           <div className="bg-[hsl(var(--sidebar-accent))]/80 p-4 rounded-xl border border-[hsl(var(--sidebar-accent))]">
             <p className="text-[10px] uppercase tracking-wider text-[hsl(var(--sidebar-foreground))]/60 font-semibold mb-1">Signed in as</p>
-            <div className="flex items-center justify-between">
-                <p className="font-medium text-sm truncate max-w-[120px]" title={user?.username}>{user?.username}</p>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    user?.role === 'admin' 
-                    ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                    : 'bg-green-500/20 text-green-300 border border-green-500/30'
-                }`}>
-                    {user?.role?.toUpperCase()}
-                </span>
-            </div>
+            <p className="font-medium text-sm truncate max-w-[160px]" title={user?.username}>{user?.username}</p>
           </div>
         </div>
 
@@ -124,16 +115,14 @@ export function Layout() {
 
         {/* Footer Actions */}
         <div className="p-4 border-t border-[hsl(var(--sidebar-accent))]/30 space-y-3 bg-[hsl(var(--sidebar-background))]">
-            {isAdmin() && (
-                <Button 
-                variant="outline" 
-                className="w-full justify-start bg-transparent border-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]/80 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
-                onClick={handleBackup}
-                >
-                <Database className="mr-2 h-4 w-4" />
-                Backup Database
-                </Button>
-            )}
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent border-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]/80 hover:bg-[hsl(var(--sidebar-accent))] hover:text-white transition-colors"
+              onClick={handleBackup}
+            >
+              <Database className="mr-2 h-4 w-4" />
+              Backup Database
+            </Button>
             
             <Button 
                 variant="ghost" 

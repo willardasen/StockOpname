@@ -77,9 +77,6 @@ export function ProductFormModal({
 
   // Auto-generate name when Brand, Type, Number, or Color changes
   useEffect(() => {
-    // Only auto-generate if NOT editing an existing product OR if force re-gen is clear (user implied strict logic)
-    // We update name whenever parts change.
-    
     // Construct name parts
     const brand = brands.find(b => b.name === formData.brand)?.name || formData.brand || '';
     const type = brandTypes.find(t => t.name === formData.brand_type)?.name || formData.brand_type || '';
@@ -112,14 +109,9 @@ export function ProductFormModal({
 
       // Manual Validation
       if (!formData.brand) { alert("Silakan pilih Brand!"); return; }
-      // brand_type and type_number are now optional
-      // if (!formData.brand_type) { alert("Silakan pilih Tipe Brand!"); return; }
-      // if (!formData.type_number) { alert("Silakan pilih No. Tipe!"); return; }
       if (!formData.color) { alert("Silakan pilih Warna!"); return; }
 
-      // Validate numeric fields (allow 0 but check for null/undefined strings if logic demands, currently allow 0)
-      if (formData.buy_price === undefined || formData.buy_price === null) { alert("Harga Beli harus diisi!"); return; }
-      if (formData.sell_price === undefined || formData.sell_price === null) { alert("Harga Jual harus diisi!"); return; }
+      // Validate numeric fields (allow 0 but check for null/undefined)
       if (formData.stock === undefined || formData.stock === null) { alert("Stok harus diisi!"); return; }
 
       onSubmit(e);
@@ -177,7 +169,7 @@ export function ProductFormModal({
                   className={selectClass}
                   value={formData.brand_type || ''}
                   onChange={(e) => setFormData({ ...formData, brand_type: e.target.value })}
-                  disabled={!formData.brand} // Disable if no brand selected
+                  disabled={!formData.brand}
                 >
                   <option value="">Pilih Tipe (Opsional)</option>
                   {filteredBrandTypes.length > 0 ? (
@@ -198,7 +190,7 @@ export function ProductFormModal({
                   className={selectClass}
                   value={formData.type_number || ''}
                   onChange={(e) => setFormData({ ...formData, type_number: e.target.value })}
-                   disabled={!formData.brand} // Disable if no brand selected
+                   disabled={!formData.brand}
                 >
                   <option value="">Pilih No. Tipe (Opsional)</option>
                   {filteredTypeNumbers.length > 0 ? (
@@ -227,30 +219,6 @@ export function ProductFormModal({
                 </select>
               </div>
 
-              <div>
-                <Label htmlFor="buy_price">Harga Beli</Label>
-                <Input
-                  id="buy_price"
-                  type="text"
-                  inputMode="numeric"
-                  value={formatNumber(formData.buy_price)}
-                  onChange={(e) => setFormData({ ...formData, buy_price: parseNumber(e.target.value) })}
-                  placeholder="0"
-                  className="placeholder:text-muted-foreground"
-                />
-              </div>
-              <div>
-                <Label htmlFor="sell_price">Harga Jual</Label>
-                <Input
-                  id="sell_price"
-                  type="text"
-                  inputMode="numeric"
-                  value={formatNumber(formData.sell_price)}
-                  onChange={(e) => setFormData({ ...formData, sell_price: parseNumber(e.target.value) })}
-                   placeholder="0"
-                   className="placeholder:text-muted-foreground"
-                />
-              </div>
               <div>
                 <Label htmlFor="stock">Stok</Label>
                 <Input

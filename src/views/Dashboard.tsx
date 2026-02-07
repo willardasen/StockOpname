@@ -3,33 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   LayoutDashboard, 
   Package, 
-  TrendingUp, 
   AlertTriangle,
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
-import { useProductStore, useTransactionStore, useAuthStore } from '@/stores';
+import { useProductStore, useTransactionStore } from '@/stores';
 
 // Helper to format number with Indonesian locale (dots for thousands)
 const formatNumber = (num: number): string => {
   return new Intl.NumberFormat('id-ID').format(num);
 };
 
-// Helper to format currency
-const formatCurrency = (num: number): string => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(num);
-};
-
 export function Dashboard() {
-  const { isAdmin } = useAuthStore();
   const { 
     totalCount, 
-    totalAssetValue, 
     lowStockProducts, 
     loadStats, 
     loadLowStockProducts 
@@ -55,21 +42,13 @@ export function Dashboard() {
       bgColor: 'bg-blue-100 dark:bg-blue-900/30'
     },
     {
-      title: 'Nilai Aset',
-      value: formatCurrency(totalAssetValue),
-      icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-      adminOnly: true
-    },
-    {
       title: 'Stok Menipis',
       value: formatNumber(lowStockProducts.length),
       icon: AlertTriangle,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100 dark:bg-orange-900/30'
     }
-  ].filter(stat => !stat.adminOnly || isAdmin());
+  ];
 
 
   return (
@@ -86,7 +65,7 @@ export function Dashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {stats.map((stat, index) => (
           <Card key={index}>
             <CardContent className="p-6">

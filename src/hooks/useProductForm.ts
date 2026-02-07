@@ -20,8 +20,6 @@ export function useProductForm() {
         brand_type: '',
         type_number: '',
         color: '',
-        buy_price: 0,
-        sell_price: 0,
         stock: 0,
         min_stock: 5,
     });
@@ -33,8 +31,6 @@ export function useProductForm() {
             brand_type: '',
             type_number: '',
             color: '',
-            buy_price: 0,
-            sell_price: 0,
             stock: 0,
             min_stock: 5,
         });
@@ -55,8 +51,6 @@ export function useProductForm() {
             brand_type: product.brand_type || '',
             type_number: product.type_number || '',
             color: product.color || '',
-            buy_price: product.buy_price,
-            sell_price: product.sell_price,
             stock: product.stock,
             min_stock: product.min_stock,
         });

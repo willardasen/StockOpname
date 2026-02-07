@@ -8,7 +8,6 @@ interface ProductState {
     lowStockProducts: Product[];
     totalCount: number;
     totalStock: number;
-    totalAssetValue: number;
     isLoading: boolean;
     error: string | null;
     searchKeyword: string;
@@ -31,7 +30,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
     lowStockProducts: [],
     totalCount: 0,
     totalStock: 0,
-    totalAssetValue: 0,
     isLoading: false,
     error: null,
     searchKeyword: '',
@@ -84,8 +82,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         try {
             const totalCount = await ProductRepo.getProductCount();
             const totalStock = await ProductRepo.getTotalStock();
-            const totalAssetValue = await ProductRepo.getTotalAssetValue();
-            set({ totalCount, totalStock, totalAssetValue });
+            set({ totalCount, totalStock });
         } catch (error) {
             console.error('Failed to load stats:', error);
         }

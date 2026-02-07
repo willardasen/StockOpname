@@ -10,11 +10,10 @@ interface AuthState {
     error: string | null;
     login: (credentials: LoginCredentials) => Promise<boolean>;
     logout: () => void;
-    isAdmin: () => boolean;
     checkAuth: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
     user: JSON.parse(localStorage.getItem('user') || 'null'),
     isAuthenticated: !!localStorage.getItem('user'),
     isLoading: false,
@@ -44,11 +43,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     logout: () => {
         localStorage.removeItem('user');
         set({ user: null, isAuthenticated: false });
-    },
-
-    isAdmin: () => {
-        const user = get().user;
-        return user?.role === 'admin';
     },
 
     checkAuth: () => {

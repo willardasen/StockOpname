@@ -1,12 +1,10 @@
 // Database model types for Stock Opname application
 
-export type UserRole = 'admin' | 'staff';
 export type TransactionType = 'IN' | 'OUT' | 'ADJUSTMENT';
 
 export interface User {
     id: number;
     username: string;
-    role: UserRole;
     created_at: string;
 }
 
@@ -23,25 +21,9 @@ export interface Product {
     brand_type: string | null;
     type_number: string | null;
     color: string | null;
-    buy_price: number;
-    sell_price: number;
     stock: number;
     min_stock: number;
     is_active: number; // 1 = active, 0 = soft deleted
-    created_at: string;
-}
-
-// Product view for Staff - excludes sensitive price data
-export interface ProductStaffView {
-    id: number;
-    name: string;
-    brand: string | null;
-    brand_type: string | null;
-    type_number: string | null;
-    color: string | null;
-    stock: number;
-    min_stock: number;
-    is_active: number;
     created_at: string;
 }
 
@@ -74,8 +56,6 @@ export interface CreateProductInput {
     brand_type?: string;
     type_number?: string;
     color?: string;
-    buy_price?: number;
-    sell_price?: number;
     stock?: number;
     min_stock?: number;
 }
@@ -108,7 +88,7 @@ export interface Brand {
 export interface BrandType {
     id: number;
     name: string;
-    brand_id?: number | null; // Optional to support legacy data if any, but should be required for new
+    brand_id?: number | null;
 }
 
 export interface TypeNumber {

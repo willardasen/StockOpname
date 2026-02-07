@@ -62,22 +62,20 @@ export const ProductRepo = {
     },
 
     /**
-     * Create new product (Admin only)
+     * Create new product
      */
     async createProduct(input: CreateProductInput): Promise<Product> {
         const db = await getDb();
 
         const result = await db.execute(
-            `INSERT INTO products (name, brand, brand_type, type_number, color, buy_price, sell_price, stock, min_stock)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO products (name, brand, brand_type, type_number, color, stock, min_stock)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
             [
                 input.name,
                 input.brand || null,
                 input.brand_type || null,
                 input.type_number || null,
                 input.color || null,
-                input.buy_price || 0,
-                input.sell_price || 0,
                 input.stock || 0,
                 input.min_stock || 5
             ]
@@ -92,7 +90,7 @@ export const ProductRepo = {
     },
 
     /**
-     * Update product (Admin only)
+     * Update product
      */
     async updateProduct(input: UpdateProductInput): Promise<Product | null> {
         const db = await getDb();
@@ -121,14 +119,6 @@ export const ProductRepo = {
             updates.push("color = ?");
             values.push(input.color || null);
         }
-        if (input.buy_price !== undefined) {
-            updates.push("buy_price = ?");
-            values.push(input.buy_price);
-        }
-        if (input.sell_price !== undefined) {
-            updates.push("sell_price = ?");
-            values.push(input.sell_price);
-        }
         if (input.stock !== undefined) {
             updates.push("stock = ?");
             values.push(input.stock);
@@ -153,7 +143,7 @@ export const ProductRepo = {
     },
 
     /**
-     * Soft delete product (Admin only)
+     * Soft delete product
      * Sets is_active = 0 instead of actual deletion
      */
     async deleteProduct(id: number): Promise<boolean> {
@@ -203,20 +193,6 @@ export const ProductRepo = {
         const result = await db.select<{ total: number }[]>(
             "SELECT COALESCE(SUM(stock), 0) as total FROM products WHERE is_active = 1"
         );
-        return result[0].total;
-    },
-
-    /**
-     * Get total asset value (Admin only)
-     * Sum of (stock * buy_price) for all products
-     */
-    async getTotalAssetValue(): Promise<number> {
-        const db = await getDb();
-
-        const result = await db.select<{ total: number }[]>(
-            "SELECT COALESCE(SUM(stock * buy_price), 0) as total FROM products WHERE is_active = 1"
-        );
-
         return result[0].total;
     },
 
