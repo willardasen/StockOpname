@@ -149,17 +149,17 @@ export function TransactionHistory() {
       {/* Transaction List */}
       <Card>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="rounded-md border bg-white overflow-hidden shadow-sm">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+              <thead className="bg-[#435585] text-white">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Tanggal</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Produk</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Tipe</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Jumlah</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Stok Setelah</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">User</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Catatan</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Tanggal</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Produk</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Tipe</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Jumlah</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Stok Setelah</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">User</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium">Catatan</th>
                 </tr>
               </thead>
               <tbody className="divide-y">

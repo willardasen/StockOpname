@@ -61,7 +61,7 @@ export function VirtualTable<T extends { id: number; stock?: number; min_stock?:
     <div className={cn('border rounded-lg overflow-hidden', className)}>
       {/* Header */}
       <div 
-        className="flex bg-gray-200 dark:bg-gray-800 font-medium text-sm border-b sticky top-0 z-10"
+        className="flex bg-[#435585] text-white font-medium text-sm border-b sticky top-0 z-10"
         style={{ minWidth: totalWidth }}
       >
         {columns.map((col) => (
@@ -100,7 +100,7 @@ export function VirtualTable<T extends { id: number; stock?: number; min_stock?:
               <div
                 key={row.id}
                 className={cn(
-                  'flex absolute w-full border-b text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors',
+                  'flex absolute w-full border-b text-sm hover:bg-gray-200 transition-colors',
                   isLowStock && 'bg-orange-100 dark:bg-orange-900/20'
                 )}
                 style={{

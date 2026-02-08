@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { TrendingUp, Calendar, Trophy, Package, Medal } from 'lucide-react';
 import { TransactionRepo } from '@/repositories';
 import { format, startOfMonth, subMonths } from 'date-fns';
@@ -64,18 +63,7 @@ export function SalesReport() {
     return format(date, 'MMMM yyyy');
   }, [selectedMonth]);
 
-  // Quick month selection
-  const quickMonths = useMemo(() => {
-    const months = [];
-    for (let i = 0; i < 6; i++) {
-      const date = subMonths(startOfMonth(new Date()), i);
-      months.push({
-        value: format(date, 'yyyy-MM'),
-        label: format(date, 'MMM yyyy')
-      });
-    }
-    return months;
-  }, []);
+ 
 
   return (
     <div className="space-y-6">

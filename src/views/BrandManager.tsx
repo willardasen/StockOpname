@@ -182,7 +182,7 @@ export function BrandManager() {
                   <div className="p-4 text-center text-gray-500 text-sm">Belum ada data brand</div>
                 ) : (
                   brands.map((item) => (
-                    <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
                       <div>
                         <span className="font-medium">{item.name}</span>
                         <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">

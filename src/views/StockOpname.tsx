@@ -334,7 +334,7 @@ export function StockOpname() {
             </div>
         </CardHeader>
         <CardContent>
-            <div className="rounded-md border bg-white overflow-hidden shadow-sm ">
+            <div className="rounded-md border bg-white overflow-hidden shadow-sm">
                 <table className="w-full text-sm">
                     <thead className="bg-[#435585] text-white">
                         <tr>
