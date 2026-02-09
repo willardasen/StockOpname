@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { invoke } from '@tauri-apps/api/core';
-import { save } from '@tauri-apps/plugin-dialog';
+import { save, open } from '@tauri-apps/plugin-dialog';
 import { 
   Package, 
   LayoutDashboard, 
@@ -10,6 +10,7 @@ import {
   History, 
   LogOut,
   Database,
+  Download,
   Menu,
   X,
   PackagePlus,
@@ -45,6 +46,34 @@ export function Layout() {
       }
     } catch (error) {
       alert(`Backup gagal: ${error}`);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const filePath = await open({
+        filters: [{
+          name: 'SQLite Database',
+          extensions: ['db', 'sqlite']
+        }],
+        multiple: false
+      });
+      
+      if (filePath) {
+        const confirm = window.confirm(
+          'PERINGATAN: Import database akan mengganti semua data yang ada.\n\n' +
+          'Pastikan Anda sudah backup data sebelumnya.\n\n' +
+          'Lanjutkan import?'
+        );
+        
+        if (confirm) {
+          await invoke('import_database', { sourcePath: filePath });
+          alert('Import berhasil! Aplikasi akan di-refresh.');
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      alert(`Import gagal: ${error}`);
     }
   };
 
@@ -122,6 +151,15 @@ export function Layout() {
             >
               <Database className="mr-2 h-4 w-4" />
               Backup Database
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              className="w-full justify-start bg-transparent border-[hsl(var(--sidebar-accent))] text-[hsl(var(--sidebar-foreground))]/80 hover:bg-green-600/20 hover:text-green-300 hover:border-green-500/30 transition-colors"
+              onClick={handleImport}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Import Database
             </Button>
             
             <Button 

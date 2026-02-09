@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::{backup_database, get_db_path, hash_password, verify_password};
+use commands::{backup_database, get_db_path, hash_password, import_database, verify_password};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -13,6 +13,7 @@ pub fn run() {
             hash_password,
             verify_password,
             backup_database,
+            import_database,
             get_db_path
         ])
         .run(tauri::generate_context!())

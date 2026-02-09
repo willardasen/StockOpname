@@ -25,3 +25,11 @@ pub fn backup_database<R: Runtime>(app: AppHandle<R>, dest_path: String) -> Resu
     fs::copy(db_path, dest_path).map_err(|e| e.to_string())?;
     Ok(())
 }
+
+#[tauri::command]
+pub fn import_database<R: Runtime>(app: AppHandle<R>, source_path: String) -> Result<(), String> {
+    let db_path = get_db_path(app)?;
+    // Copy the selected database file to the app's database location
+    fs::copy(source_path, db_path).map_err(|e| e.to_string())?;
+    Ok(())
+}
