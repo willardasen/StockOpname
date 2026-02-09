@@ -60,14 +60,23 @@ export function Layout() {
       });
       
       if (filePath) {
-        const confirm = window.confirm(
+        const confirmImport = window.confirm(
           'PERINGATAN: Import database akan mengganti semua data yang ada.\n\n' +
           'Pastikan Anda sudah backup data sebelumnya.\n\n' +
           'Lanjutkan import?'
         );
         
-        if (confirm) {
+        if (confirmImport) {
+          // Close existing database connection before import
+          const { closeDb, initializeDatabase } = await import('@/repositories');
+          await closeDb();
+          
+          // Perform import
           await invoke('import_database', { sourcePath: filePath });
+          
+          // Reinitialize database connection with new data
+          await initializeDatabase();
+          
           alert('Import berhasil! Aplikasi akan di-refresh.');
           window.location.reload();
         }
