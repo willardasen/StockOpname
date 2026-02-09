@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { VirtualTable } from '@/components/common';
-import { History, Download, Filter, Search } from 'lucide-react';
+import { History, Filter, Search, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { exportToExcel } from '@/utils/excel';
 import type { TransactionType, TransactionWithProduct } from '@/types/database';
@@ -81,7 +81,7 @@ export function TransactionHistory() {
           </p>
         </div>
         <Button onClick={handleExport} variant="outline">
-          <Download className="mr-2 h-4 w-4" />
+          <Upload className="mr-2 h-4 w-4" />
           Export Excel
         </Button>
       </div>
@@ -154,7 +154,7 @@ export function TransactionHistory() {
             data={filteredTransactions}
             columns={[
               { key: 'created_at', header: 'Tanggal', width: 140, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy HH:mm') },
-              { key: 'product_name', header: 'Produk', width: 250 },
+              { key: 'product_name', header: 'Nama Produk', width: 200 },
               { key: 'type', header: 'Tipe', width: 100, render: (v, row) => (
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeClass((row as TransactionWithProduct).type)}`}>
                   {String(v)}
@@ -169,8 +169,7 @@ export function TransactionHistory() {
                 );
               }},
               { key: 'current_stock_snapshot', header: 'Stok Setelah', width: 100 },
-              { key: 'username', header: 'User', width: 120 },
-              { key: 'note', header: 'Catatan', width: 200, render: (v) => String(v || '-') },
+              { key: 'note', header: 'Catatan', width: 250, render: (v) => String(v || '-') },
             ]}
             emptyMessage="Tidak ada transaksi ditemukan"
           />

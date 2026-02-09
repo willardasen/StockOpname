@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { VirtualTable } from '@/components/common';
-import { PackageMinus, Search, RotateCcw, Save, Pencil, Trash2, Download, Filter } from 'lucide-react';
+import { PackageMinus, Search, RotateCcw, Save, Pencil, Trash2, Filter, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTransactionStore, useAuthStore } from '@/stores';
 import { ProductRepo, TransactionRepo } from '@/repositories';
@@ -148,7 +148,7 @@ export function StockOut() {
     }
     const trimmedNote = note.trim();
     if (!trimmedNote) {
-      alert('Penanggung Jawab tidak boleh kosong!');
+      alert('Penanggung Jawab/Catatan tidak boleh kosong!');
       return;
     }
     if (!user) {
@@ -228,7 +228,7 @@ export function StockOut() {
 
             {/* Product Search */}
             <div className="space-y-2 flex-1 min-w-[300px]">
-              <Label htmlFor="search">Kode / Nama Barang</Label>
+              <Label htmlFor="search">Kode / Nama Produk</Label>
               <div className="flex gap-2">
                 <Input
                   id="search"
@@ -275,7 +275,7 @@ export function StockOut() {
           {selectedProduct && (
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-200 rounded-lg border">
               <div className="space-y-2">
-                <Label>Nama Barang</Label>
+                <Label>Nama Produk</Label>
                 <Input value={selectedProduct.name} readOnly className="bg-white" />
               </div>
               <div className="space-y-2">
@@ -381,7 +381,7 @@ export function StockOut() {
             <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                    placeholder="Cari kode atau nama barang..."
+                    placeholder="Cari kode atau Nama Produk..."
                     value={tableSearch}
                     onChange={(e) => setTableSearch(e.target.value)}
                     className="pl-9 bg-white text-black"
@@ -411,7 +411,7 @@ export function StockOut() {
                     <RotateCcw className="h-4 w-4" />
                 </Button>
                 <Button variant="outline" size="sm">
-                    <Download className="h-4 w-4 mr-2" />
+                    <Upload className="h-4 w-4 mr-2" />
                     Export
                 </Button>
              </div>
@@ -425,12 +425,12 @@ export function StockOut() {
           )}
           columns={[
             { key: 'created_at', header: 'Tanggal', width: 100, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy') },
-            { key: 'product_name', header: 'Nama Barang', width: 250 },
+            { key: 'product_name', header: 'Nama Produk', width: 200 },
             { key: 'brand', header: 'Brand', width: 120, render: (v) => String(v || '-') },
             { key: 'brand_type', header: 'Tipe', width: 80, render: (v) => String(v || '-') },
             { key: 'type_number', header: 'No Tipe', width: 80, render: (v) => String(v || '-') },
             { key: 'color', header: 'Warna', width: 80, render: (v) => String(v || '-') },
-            { key: 'note', header: 'Penanggung Jawab', width: 150, render: (v, row) => String(v || (row as TransactionWithProduct).username || '-') },
+            { key: 'note', header: 'Penanggung Jawab/ Catatan', width: 200, render: (v, row) => String(v || (row as TransactionWithProduct).username || '-') },
             { key: 'qty', header: 'Box', width: 80, align: 'right' as const, render: (_, row) => {
               const t = row as TransactionWithProduct;
               return t.pcs_per_box && t.pcs_per_box > 1 
