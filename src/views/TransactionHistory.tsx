@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { VirtualTable } from '@/components/common';
 import { History, Download, Filter, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { exportToExcel } from '@/utils/excel';
-import type { TransactionType } from '@/types/database';
+import type { TransactionType, TransactionWithProduct } from '@/types/database';
 
 export function TransactionHistory() {
   const { transactions, loadTransactions, isLoading, getTransactionsByDateRange } = useTransactionStore();
@@ -149,53 +150,30 @@ export function TransactionHistory() {
       {/* Transaction List */}
       <Card>
         <CardContent className="p-0">
-          <div className="rounded-md border bg-white overflow-hidden shadow-sm">
-            <table className="w-full">
-              <thead className="bg-[#435585] text-white">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Tanggal</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Produk</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Tipe</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Jumlah</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Stok Setelah</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">User</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Catatan</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredTransactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-200">
-                    <td className="px-4 py-3 text-sm">
-                      {format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm')}
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium">{tx.product_name}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeClass(tx.type)}`}>
-                        {tx.type}
-                      </span>
-                    </td>
-                    <td className={`px-4 py-3 text-sm font-bold ${
-                      tx.qty >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {tx.qty >= 0 ? '+' : ''}{tx.qty}
-                    </td>
-                    <td className="px-4 py-3 text-sm">{tx.current_stock_snapshot}</td>
-                    <td className="px-4 py-3 text-sm">{tx.username}</td>
-                    <td className="px-4 py-3 text-sm text-gray-500 max-w-xs truncate">
-                      {tx.note || '-'}
-                    </td>
-                  </tr>
-                ))}
-                {filteredTransactions.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
-                      Tidak ada transaksi ditemukan
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <VirtualTable
+            data={filteredTransactions}
+            columns={[
+              { key: 'created_at', header: 'Tanggal', width: 140, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy HH:mm') },
+              { key: 'product_name', header: 'Produk', width: 250 },
+              { key: 'type', header: 'Tipe', width: 100, render: (v, row) => (
+                <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeClass((row as TransactionWithProduct).type)}`}>
+                  {String(v)}
+                </span>
+              )},
+              { key: 'qty', header: 'Jumlah', width: 100, render: (_, row) => {
+                const tx = row as TransactionWithProduct;
+                return (
+                  <span className={`font-bold ${tx.qty >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {tx.qty >= 0 ? '+' : ''}{tx.qty}
+                  </span>
+                );
+              }},
+              { key: 'current_stock_snapshot', header: 'Stok Setelah', width: 100 },
+              { key: 'username', header: 'User', width: 120 },
+              { key: 'note', header: 'Catatan', width: 200, render: (v) => String(v || '-') },
+            ]}
+            emptyMessage="Tidak ada transaksi ditemukan"
+          />
         </CardContent>
       </Card>
     </div>

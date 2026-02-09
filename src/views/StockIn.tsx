@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { VirtualTable } from '@/components/common';
 import { PackagePlus, Search, RotateCcw, Save, Trash2, Pencil, Download, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTransactionStore, useAuthStore } from '@/stores';
@@ -411,78 +412,47 @@ export function StockIn() {
              </div>
         </div>
 
-        <div className="rounded-md border bg-white overflow-hidden shadow-sm">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-[#435585] text-white">
-              <tr>
-                <th className="px-4 py-3 font-medium">Tanggal</th>
-                <th className="px-4 py-3 font-medium">Nama Barang</th>
-                <th className="px-4 py-3 font-medium">Brand</th>
-                <th className="px-4 py-3 font-medium">Tipe</th>
-                <th className="px-4 py-3 font-medium">No Tipe</th>
-                <th className="px-4 py-3 font-medium">Warna</th>
-                <th className="px-4 py-3 font-medium">Penanggung Jawab</th>
-                <th className="px-4 py-3 font-medium text-right">Box</th>
-                <th className="px-4 py-3 font-medium text-right">Jumlah (Pcs)</th>
-                <th className="px-4 py-3 font-medium text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {recentTransactions
-                .filter(t => 
-                    !tableSearch || 
-                    t.product_name.toLowerCase().includes(tableSearch.toLowerCase()) ||
-                    (t.id.toString()).includes(tableSearch)
-                )
-                .map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {format(new Date(t.created_at), 'dd/MM/yyyy')}
-                  </td>
-                  <td className="px-4 py-3 font-medium">{t.product_name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{t.brand || '-'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{t.brand_type || '-'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{t.type_number || '-'}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{t.color || '-'}</td>
-                  <td className="px-4 py-3 capitalize">
-                    {t.note || t.username || '-'}
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium">
-                    {t.pcs_per_box && t.pcs_per_box > 1 
-                        ? new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(t.qty / t.pcs_per_box)
-                        : (t.pcs_per_box === 1 && t.qty > 0 ? t.qty : '-')
-                    }
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium text-green-600">
-                    {formatNumber(t.qty)}
-                  </td>
-                   <td className="px-4 py-3 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                            <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            onClick={() => handleDeleteTransaction(t.id)}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-               {recentTransactions.length === 0 && (
-                  <tr>
-                      <td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">
-                          Belum ada data transaksi hari ini
-                      </td>
-                  </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <VirtualTable
+          data={recentTransactions.filter(t => 
+            !tableSearch || 
+            t.product_name.toLowerCase().includes(tableSearch.toLowerCase()) ||
+            (t.id.toString()).includes(tableSearch)
+          )}
+          columns={[
+            { key: 'created_at', header: 'Tanggal', width: 100, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy') },
+            { key: 'product_name', header: 'Nama Barang', width: 250 },
+            { key: 'brand', header: 'Brand', width: 120, render: (v) => String(v || '-') },
+            { key: 'brand_type', header: 'Tipe', width: 80, render: (v) => String(v || '-') },
+            { key: 'type_number', header: 'No Tipe', width: 80, render: (v) => String(v || '-') },
+            { key: 'color', header: 'Warna', width: 80, render: (v) => String(v || '-') },
+            { key: 'note', header: 'Penanggung Jawab', width: 150, render: (v, row) => String(v || (row as TransactionWithProduct).username || '-') },
+            { key: 'qty', header: 'Box', width: 80, align: 'right' as const, render: (_, row) => {
+              const t = row as TransactionWithProduct;
+              return t.pcs_per_box && t.pcs_per_box > 1 
+                ? new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(t.qty / t.pcs_per_box)
+                : (t.pcs_per_box === 1 && t.qty > 0 ? t.qty : '-');
+            }},
+            { key: 'qty_pcs', header: 'Jumlah (Pcs)', width: 100, align: 'right' as const, render: (_, row) => (
+              <span className="font-medium text-green-600">{formatNumber((row as TransactionWithProduct).qty)}</span>
+            )},
+            { key: 'actions', header: 'Aksi', width: 100, align: 'center' as const, render: (_, row) => (
+              <div className="flex items-center justify-center gap-2">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={() => handleDeleteTransaction((row as TransactionWithProduct).id)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )},
+          ]}
+          emptyMessage="Belum ada data transaksi hari ini"
+        />
       </div>
 
       {/* Confirm Dialog */}

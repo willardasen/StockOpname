@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { VirtualTable } from '@/components/common';
 import { TrendingUp, Calendar, Trophy, Package, Medal } from 'lucide-react';
 import { TransactionRepo } from '@/repositories';
-import { format, startOfMonth, subMonths } from 'date-fns';
+import { format } from 'date-fns';
 
 // Helper: Format number with thousands separator
 const formatNumber = (num: number): string => {
@@ -153,70 +154,48 @@ export function SalesReport() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="rounded-md border-t overflow-hidden">
-            <table className="w-full text-sm text-left">
-              <thead className="bg-[#435585] text-white">
-                <tr>
-                  <th className="px-4 py-3 font-medium w-16 text-center">Rank</th>
-                  <th className="px-4 py-3 font-medium">Nama Produk</th>
-                  <th className="px-4 py-3 font-medium">Brand</th>
-                  <th className="px-4 py-3 font-medium">Tipe</th>
-                  <th className="px-4 py-3 font-medium">No Tipe</th>
-                  <th className="px-4 py-3 font-medium">Warna</th>
-                  <th className="px-4 py-3 font-medium text-right">Stok Masuk</th>
-                  <th className="px-4 py-3 font-medium text-right">Stok Keluar</th>
-                  <th className="px-4 py-3 font-medium text-right">Transaksi</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                      Memuat data...
-                    </td>
-                  </tr>
-                ) : salesData.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                      Tidak ada data penjualan untuk periode ini
-                    </td>
-                  </tr>
-                ) : (
-                  salesData.map((item, index) => (
-                    <tr key={item.product_id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-center">
-                        {index < 3 ? (
-                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
-                            index === 0 ? 'bg-amber-500' :
-                            index === 1 ? 'bg-gray-400' :
-                            'bg-amber-700'
-                          }`}>
-                            {index + 1}
-                          </span>
-                        ) : (
-                          <span className="text-gray-500">{index + 1}</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 font-medium">{item.product_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{item.brand || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{item.brand_type || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{item.type_number || '-'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{item.color || '-'}</td>
-                      <td className="px-4 py-3 text-right font-bold text-green-600">
-                        {item.total_qty_in > 0 ? `+${formatNumber(item.total_qty_in)}` : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-right font-bold text-purple-600">
-                        {formatNumber(item.total_qty_out)} Pcs
-                      </td>
-                      <td className="px-4 py-3 text-right text-muted-foreground">
-                        {formatNumber(item.transaction_count)}x
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {isLoading ? (
+            <div className="px-4 py-8 text-center text-muted-foreground">
+              Memuat data...
+            </div>
+          ) : (
+            <VirtualTable
+              data={salesData.map((item, index) => ({ ...item, id: item.product_id, rank: index + 1 }))}
+              columns={[
+                { key: 'rank', header: 'Rank', width: 70, align: 'center' as const, render: (_, row) => {
+                  const index = (row as SalesData & { rank: number }).rank - 1;
+                  return index < 3 ? (
+                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${
+                      index === 0 ? 'bg-amber-500' :
+                      index === 1 ? 'bg-gray-400' :
+                      'bg-amber-700'
+                    }`}>
+                      {index + 1}
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">{index + 1}</span>
+                  );
+                }},
+                { key: 'product_name', header: 'Nama Produk', width: 250 },
+                { key: 'brand', header: 'Brand', width: 120, render: (v) => String(v || '-') },
+                { key: 'brand_type', header: 'Tipe', width: 80, render: (v) => String(v || '-') },
+                { key: 'type_number', header: 'No Tipe', width: 80, render: (v) => String(v || '-') },
+                { key: 'color', header: 'Warna', width: 80, render: (v) => String(v || '-') },
+                { key: 'total_qty_in', header: 'Stok Masuk', width: 100, align: 'right' as const, render: (v) => (
+                  <span className="font-bold text-green-600">
+                    {Number(v) > 0 ? `+${formatNumber(Number(v))}` : '-'}
+                  </span>
+                )},
+                { key: 'total_qty_out', header: 'Stok Keluar', width: 100, align: 'right' as const, render: (v) => (
+                  <span className="font-bold text-purple-600">{formatNumber(Number(v))} Pcs</span>
+                )},
+                { key: 'transaction_count', header: 'Transaksi', width: 90, align: 'right' as const, render: (v) => (
+                  <span className="text-muted-foreground">{formatNumber(Number(v))}x</span>
+                )},
+              ]}
+              emptyMessage="Tidak ada data penjualan untuk periode ini"
+            />
+          )}
         </CardContent>
       </Card>
     </div>

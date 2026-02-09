@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore, useProductStore, useBrandStore } from '@/stores';
 import { useStockOpname } from '@/hooks';
-import { SearchInput } from '@/components/common';
+import { SearchInput, VirtualTable } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -334,46 +334,32 @@ export function StockOpname() {
             </div>
         </CardHeader>
         <CardContent>
-            <div className="rounded-md border bg-white overflow-hidden shadow-sm">
-                <table className="w-full text-sm">
-                    <thead className="bg-[#435585] text-white">
-                        <tr>
-                            <th className="px-4 py-3 text-left font-medium">Tanggal</th>
-                            <th className="px-4 py-3 text-left font-medium">Merek</th>
-                            <th className="px-4 py-3 text-right font-medium">Stok Sistem</th>
-                            <th className="px-4 py-3 text-right font-medium">Stok Fisik</th>
-                            <th className="px-4 py-3 text-right font-medium">Selisih</th>
-                            <th className="px-4 py-3 text-right font-medium">Total IN</th>
-                            <th className="px-4 py-3 text-right font-medium">Total OUT</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                        {opnameHistory.map((record) => (
-                            <tr key={record.id} className="hover:bg-muted/30">
-                                <td className="px-4 py-3">{record.date}</td>
-                                <td className="px-4 py-3 font-medium">{record.brand || '-'}</td>
-                                <td className="px-4 py-3 text-right font-mono">{new Intl.NumberFormat('id-ID').format(record.system_stock)}</td>
-                                <td className="px-4 py-3 text-right font-mono">{new Intl.NumberFormat('id-ID').format(record.physical_stock)}</td>
-                                <td className={`px-4 py-3 text-right font-mono font-medium ${
-                                    record.difference === 0 ? 'text-green-600' :
-                                    record.difference > 0 ? 'text-blue-600' : 'text-red-600'
-                                }`}>
-                                    {record.difference > 0 ? '+' : ''}{new Intl.NumberFormat('id-ID').format(record.difference)}
-                                </td>
-                                <td className="px-4 py-3 text-right font-mono text-green-600">+{new Intl.NumberFormat('id-ID').format(record.total_in)}</td>
-                                <td className="px-4 py-3 text-right font-mono text-red-600">-{new Intl.NumberFormat('id-ID').format(record.total_out)}</td>
-                            </tr>
-                        ))}
-                        {opnameHistory.length === 0 && (
-                            <tr>
-                                <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">
-                                    Belum ada data verifikasi
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            <VirtualTable
+                data={opnameHistory}
+                columns={[
+                  { key: 'date', header: 'Tanggal', width: 120 },
+                  { key: 'brand', header: 'Merek', width: 150, render: (v) => String(v || '-') },
+                  { key: 'system_stock', header: 'Stok Sistem', width: 120, align: 'right' as const, render: (v) => new Intl.NumberFormat('id-ID').format(Number(v)) },
+                  { key: 'physical_stock', header: 'Stok Fisik', width: 120, align: 'right' as const, render: (v) => new Intl.NumberFormat('id-ID').format(Number(v)) },
+                  { key: 'difference', header: 'Selisih', width: 100, align: 'right' as const, render: (_, row) => {
+                    const record = row as GlobalOpnameRecord;
+                    const diff = record.difference;
+                    const colorClass = diff === 0 ? 'text-green-600' : diff > 0 ? 'text-blue-600' : 'text-red-600';
+                    return (
+                      <span className={`font-mono font-medium ${colorClass}`}>
+                        {diff > 0 ? '+' : ''}{new Intl.NumberFormat('id-ID').format(diff)}
+                      </span>
+                    );
+                  }},
+                  { key: 'total_in', header: 'Total IN', width: 100, align: 'right' as const, render: (v) => (
+                    <span className="font-mono text-green-600">+{new Intl.NumberFormat('id-ID').format(Number(v))}</span>
+                  )},
+                  { key: 'total_out', header: 'Total OUT', width: 100, align: 'right' as const, render: (v) => (
+                    <span className="font-mono text-red-600">-{new Intl.NumberFormat('id-ID').format(Number(v))}</span>
+                  )},
+                ]}
+                emptyMessage="Belum ada data verifikasi"
+            />
         </CardContent>
       </Card>
         </TabsContent>
