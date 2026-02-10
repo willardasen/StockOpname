@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { VirtualTable } from '@/components/common';
+import { VirtualTable, ProductFilterBar } from '@/components/common';
+import type { ProductFilter } from '@/components/common';
 import { PackagePlus, Search, RotateCcw, Save, Trash2, Pencil, Upload, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { useTransactionStore, useAuthStore } from '@/stores';
 import { ProductRepo, TransactionRepo } from '@/repositories';
 import type { Product, TransactionWithProduct } from '@/types/database';
+import { exportToExcel } from '@/utils/excel';
 
 // Helper: Format number with thousands separator (dots)
 const formatNumber = (num: number | string | undefined): string => {
@@ -45,6 +47,7 @@ export function StockIn() {
   const [tableSearch, setTableSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [tableFilter, setTableFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
 
   // Confirm Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -184,6 +187,35 @@ export function StockIn() {
           }
           closeConfirm();
       });
+  };
+
+  // Calculate filtered data helper
+  const getFilteredData = useCallback(() => {
+    return recentTransactions.filter(t => {
+      if (tableSearch && !t.product_name.toLowerCase().includes(tableSearch.toLowerCase()) && !(t.id.toString()).includes(tableSearch)) return false;
+      if (tableFilter.brand && t.brand !== tableFilter.brand) return false;
+      if (tableFilter.brandType && t.brand_type !== tableFilter.brandType) return false;
+      if (tableFilter.typeNumber && t.type_number !== tableFilter.typeNumber) return false;
+      if (tableFilter.color && t.color !== tableFilter.color) return false;
+      return true;
+    });
+  }, [recentTransactions, tableSearch, tableFilter]);
+
+  const handleExport = () => {
+    const dataToExport = getFilteredData().map(tx => ({
+      'Tanggal': format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm'),
+      'Nama Produk': tx.product_name,
+      'Brand': tx.brand || '-',
+      'Tipe': tx.brand_type || '-',
+      'No Tipe': tx.type_number || '-',
+      'Warna': tx.color || '-',
+      'Jumlah': `+${tx.qty}`,
+      'Stok Setelah': tx.current_stock_snapshot,
+      'User': tx.username || '-',
+      'Catatan': tx.note || '-',
+    }));
+    
+    exportToExcel(dataToExport, `stok_masuk_${format(new Date(), 'yyyyMMdd')}`);
   };
 
   return (
@@ -405,19 +437,16 @@ export function StockIn() {
                 <Button variant="outline" size="sm" onClick={handleResetFilter} title="Reset Filter">
                     <RotateCcw className="h-4 w-4" />
                 </Button>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={handleExport}>
                     <Upload className="h-4 w-4 mr-2" />
                     Export
                 </Button>
              </div>
         </div>
+        <ProductFilterBar onFilterChange={setTableFilter} />
 
         <VirtualTable
-          data={recentTransactions.filter(t => 
-            !tableSearch || 
-            t.product_name.toLowerCase().includes(tableSearch.toLowerCase()) ||
-            (t.id.toString()).includes(tableSearch)
-          )}
+          data={getFilteredData()}
           columns={[
             { key: 'created_at', header: 'Tanggal', width: 100, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy') },
             { key: 'product_name', header: 'Nama Produk', width: 200 },

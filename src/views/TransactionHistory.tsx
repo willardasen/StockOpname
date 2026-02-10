@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { VirtualTable } from '@/components/common';
+import { VirtualTable, ProductFilterBar } from '@/components/common';
+import type { ProductFilter } from '@/components/common';
 import { History, Filter, Search, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { exportToExcel } from '@/utils/excel';
@@ -17,6 +18,7 @@ export function TransactionHistory() {
   const [endDate, setEndDate] = useState('');
   const [filterType, setFilterType] = useState<TransactionType | ''>('');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [productFilter, setProductFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
 
   // Filter transactions by search keyword (client-side)
   const filteredTransactions = transactions.filter(tx => {
@@ -28,6 +30,12 @@ export function TransactionHistory() {
       tx.note?.toLowerCase().includes(keyword) ||
       tx.type?.toLowerCase().includes(keyword)
     );
+  }).filter(tx => {
+    if (productFilter.brand && tx.brand !== productFilter.brand) return false;
+    if (productFilter.brandType && tx.brand_type !== productFilter.brandType) return false;
+    if (productFilter.typeNumber && tx.type_number !== productFilter.typeNumber) return false;
+    if (productFilter.color && tx.color !== productFilter.color) return false;
+    return true;
   });
 
   useEffect(() => {
@@ -144,6 +152,7 @@ export function TransactionHistory() {
               Terapkan Filter
             </Button>
           </div>
+          <ProductFilterBar onFilterChange={setProductFilter} className="mt-3" />
         </CardContent>
       </Card>
 
@@ -169,7 +178,7 @@ export function TransactionHistory() {
                 );
               }},
               { key: 'current_stock_snapshot', header: 'Stok Setelah', width: 100 },
-              { key: 'note', header: 'Catatan', width: 250, render: (v) => String(v || '-') },
+              { key: 'note', header: 'Penanggung Jawab / Catatan', width: 250, render: (v) => String(v || '-') },
             ]}
             emptyMessage="Tidak ada transaksi ditemukan"
           />

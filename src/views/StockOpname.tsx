@@ -1,14 +1,17 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore, useProductStore, useBrandStore } from '@/stores';
 import { useStockOpname } from '@/hooks';
-import { SearchInput, VirtualTable } from '@/components/common';
+import { SearchInput, VirtualTable, ProductFilterBar } from '@/components/common';
+import type { ProductFilter } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClipboardCheck, Search, Save, Check, Calculator, RotateCcw, Filter } from 'lucide-react';
+import { ClipboardCheck, Search, Save, Check, Calculator, RotateCcw, Filter, Upload } from 'lucide-react';
 import { GlobalOpnameRepo, TransactionRepo, ProductRepo, type GlobalOpnameRecord } from '@/repositories';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { exportToExcel } from '@/utils/excel';
+import { format } from 'date-fns';
 
 export function StockOpname() {
   const { user } = useAuthStore();
@@ -28,6 +31,7 @@ export function StockOpname() {
   const [endDate, setEndDate] = useState('');
   const [savingGlobal, setSavingGlobal] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
+  const [opnameProductFilter, setOpnameProductFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
   
   // Calculate total physical and difference using dynamic pcsPerBox
   const globalPhysicalTotal = useMemo(() => {
@@ -98,6 +102,20 @@ export function StockOpname() {
     setEndDate('');
     loadHistory();
   };
+
+  const handleExportHistory = () => {
+    const dataToExport = opnameHistory.map(record => ({
+      'Tanggal': record.date,
+      'Merek': record.brand,
+      'Stok Sistem': record.system_stock,
+      'Stok Fisik': record.physical_stock,
+      'Selisih': record.difference,
+      'Total IN': record.total_in,
+      'Total OUT': record.total_out,
+    }));
+    
+    exportToExcel(dataToExport, `riwayat_opname_${format(new Date(), 'yyyyMMdd')}`);
+  };
   
   // Save today's verification
   const handleSaveGlobalOpname = async () => {
@@ -159,6 +177,16 @@ export function StockOpname() {
       searchProducts(keyword);
     }
   };
+
+  const filteredOpnameProducts = useMemo(() => {
+    return products.filter(p => {
+      if (opnameProductFilter.brand && p.brand !== opnameProductFilter.brand) return false;
+      if (opnameProductFilter.brandType && p.brand_type !== opnameProductFilter.brandType) return false;
+      if (opnameProductFilter.typeNumber && p.type_number !== opnameProductFilter.typeNumber) return false;
+      if (opnameProductFilter.color && p.color !== opnameProductFilter.color) return false;
+      return true;
+    });
+  }, [products, opnameProductFilter]);
 
   return (
     <div className="space-y-6">
@@ -328,8 +356,12 @@ export function StockOpname() {
                 </Button>
                 
                 
-                 <Button variant="outline" size="sm" onClick={handleResetFilter} title="Tampilkan Semua">
+                <Button variant="outline" size="sm" onClick={handleResetFilter} title="Tampilkan Semua">
                     <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleExportHistory} title="Export Excel">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Export
                 </Button>
             </div>
         </CardHeader>
@@ -379,10 +411,12 @@ export function StockOpname() {
               onSearch={handleSearch}
               placeholder="Ketik nama produk untuk mencari..."
             />
+
+            <ProductFilterBar onFilterChange={setOpnameProductFilter} />
             
             {/* Search Results */}
             <div className="space-y-2 max-h-96 overflow-auto">
-              {products.map((product) => (
+              {filteredOpnameProducts.map((product) => (
                 <div
                   key={product.id}
                   onClick={() => selectProduct(product)}
@@ -412,7 +446,7 @@ export function StockOpname() {
                 </div>
               ))}
               
-              {products.length === 0 && (
+              {filteredOpnameProducts.length === 0 && (
                 <p className="text-center text-gray-500 py-8">
                   Memuat produk...
                 </p>

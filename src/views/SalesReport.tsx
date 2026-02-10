@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { VirtualTable } from '@/components/common';
+import { VirtualTable, ProductFilterBar } from '@/components/common';
+import type { ProductFilter } from '@/components/common';
 import { TrendingUp, Calendar, Trophy, Package, Medal } from 'lucide-react';
 import { TransactionRepo } from '@/repositories';
 import { format } from 'date-fns';
@@ -27,6 +28,17 @@ export function SalesReport() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
   const [salesData, setSalesData] = useState<SalesData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [salesFilter, setSalesFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
+
+  const filteredSalesData = useMemo(() => {
+    return salesData.filter(item => {
+      if (salesFilter.brand && item.brand !== salesFilter.brand) return false;
+      if (salesFilter.brandType && item.brand_type !== salesFilter.brandType) return false;
+      if (salesFilter.typeNumber && item.type_number !== salesFilter.typeNumber) return false;
+      if (salesFilter.color && item.color !== salesFilter.color) return false;
+      return true;
+    });
+  }, [salesData, salesFilter]);
 
   // Load sales data for the selected month
   const loadSalesData = async (yearMonth: string) => {
@@ -52,10 +64,10 @@ export function SalesReport() {
     
     const totalSold = salesData.reduce((sum, item) => sum + item.total_qty_out, 0);
     const totalTransactions = salesData.reduce((sum, item) => sum + item.transaction_count, 0);
-    const topProduct = salesData[0]; // Already sorted by total_qty_out DESC
+    const topProduct = filteredSalesData[0]; // Already sorted by total_qty_out DESC
     
     return { totalSold, totalTransactions, topProduct };
-  }, [salesData]);
+  }, [salesData, filteredSalesData]);
 
   // Get month display name
   const monthDisplayName = useMemo(() => {
@@ -154,13 +166,14 @@ export function SalesReport() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
+          <ProductFilterBar onFilterChange={setSalesFilter} className="px-4 pt-2 py-2" />
           {isLoading ? (
             <div className="px-4 py-8 text-center text-muted-foreground">
               Memuat data...
             </div>
           ) : (
             <VirtualTable
-              data={salesData.map((item, index) => ({ ...item, id: item.product_id, rank: index + 1 }))}
+              data={filteredSalesData.map((item, index) => ({ ...item, id: item.product_id, rank: index + 1 }))}
               columns={[
                 { key: 'rank', header: 'Rank', width: 70, align: 'center' as const, render: (_, row) => {
                   const index = (row as SalesData & { rank: number }).rank - 1;

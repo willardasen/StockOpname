@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useProductStore } from '@/stores';
 import { useProductForm } from '@/hooks';
-import { VirtualTable, SearchInput, ProductFormModal } from '@/components/common';
+import { VirtualTable, SearchInput, ProductFormModal, ProductFilterBar } from '@/components/common';
+import type { ProductFilter } from '@/components/common';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Plus, Package, Pencil, Trash2 } from 'lucide-react';
@@ -42,9 +43,22 @@ export function ProductList() {
     setConfirmDialog({ isOpen: false, message: '', onConfirm: () => {} });
   };
 
+  // Filter state
+  const [productFilter, setProductFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
+
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      if (productFilter.brand && p.brand !== productFilter.brand) return false;
+      if (productFilter.brandType && p.brand_type !== productFilter.brandType) return false;
+      if (productFilter.typeNumber && p.type_number !== productFilter.typeNumber) return false;
+      if (productFilter.color && p.color !== productFilter.color) return false;
+      return true;
+    });
+  }, [products, productFilter]);
 
   const columns = [
     { key: 'name' as const, header: 'Nama Produk', width: 250 },
@@ -138,7 +152,7 @@ export function ProductList() {
             Daftar Produk
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {products.length} produk ditemukan
+            {filteredProducts.length} produk ditemukan
           </p>
         </div>
         <Button onClick={handleAddNew} variant="outline">
@@ -154,9 +168,12 @@ export function ProductList() {
         className="max-w-md"
       />
 
+      {/* Filter Dropdowns */}
+      <ProductFilterBar onFilterChange={setProductFilter} />
+
       {/* Table */}
       <VirtualTable
-        data={products}
+        data={filteredProducts}
         columns={columns}
         highlightLowStock={true}
         emptyMessage="Tidak ada produk ditemukan"
