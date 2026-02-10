@@ -247,7 +247,7 @@ export function BrandManager() {
                   brandTypes.map((item) => {
                     const parentBrand = brands.find(b => b.id === item.brand_id);
                     return (
-                        <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
                         <div>
                             <span className="font-medium">{item.name}</span>
                             {parentBrand && (
@@ -315,7 +315,7 @@ export function BrandManager() {
                   typeNumbers.map((item) => {
                     const parentBrand = brands.find(b => b.id === item.brand_id);
                     return (
-                        <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
                         <div>
                             <span className="font-medium">{item.name}</span>
                             {parentBrand && (
@@ -372,7 +372,7 @@ export function BrandManager() {
                             <div className="p-4 text-center text-gray-500 text-sm">Belum ada data warna</div>
                         ) : (
                             colors?.map((item) => (
-                                <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-gray-800">
+                                <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
                                     <span>{item.name}</span>
                                     <Button 
                                         variant="ghost" 

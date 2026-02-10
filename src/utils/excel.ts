@@ -1,4 +1,3 @@
-import * as XLSX from 'xlsx';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeFile } from '@tauri-apps/plugin-fs';
 
@@ -16,6 +15,9 @@ export async function exportToExcel<T extends Record<string, unknown>>(
     }
 
     try {
+        // Dynamically import xlsx to save RAM on initial load
+        const XLSX = await import('xlsx');
+
         // Generate default filename with extension
         const defaultFilename = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
 
