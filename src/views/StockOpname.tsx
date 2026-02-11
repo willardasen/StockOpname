@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useAuthStore, useProductStore, useBrandStore } from '@/stores';
 import { useStockOpname } from '@/hooks';
-import { SearchInput, VirtualTable, ProductFilterBar } from '@/components/common';
+import { SearchInput, VirtualTable, VirtualList, ProductFilterBar } from '@/components/common';
 import type { ProductFilter } from '@/components/common';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -415,42 +415,42 @@ export function StockOpname() {
             <ProductFilterBar onFilterChange={setOpnameProductFilter} />
             
             {/* Search Results */}
-            <div className="space-y-2 max-h-96 overflow-auto">
-              {filteredOpnameProducts.map((product) => (
-                <div
-                  key={product.id}
-                  onClick={() => selectProduct(product)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                    selectedProduct?.id === product.id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'hover:bg-gray-200'
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {[product.brand, product.brand_type, product.color]
-                          .filter(Boolean)
-                          .join(' - ') || '-'}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500">Stok Sistem</p>
-                      {/* System stock - visible to all */}
-                      <p className="font-bold text-lg">
-                        {product.stock}
-                      </p>
+            <div className="space-y-2">
+              <VirtualList
+                data={filteredOpnameProducts}
+                height="400px"
+                itemHeight={80} // Approx product card height
+                emptyMessage="Memuat produk..."
+                renderItem={(product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => selectProduct(product)}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors mb-2 ${
+                      selectedProduct?.id === product.id
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'hover:bg-gray-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-sm md:text-base">{product.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {[product.brand, product.brand_type, product.color]
+                            .filter(Boolean)
+                            .join(' - ') || '-'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-gray-500">Stok Sistem</p>
+                        {/* System stock - visible to all */}
+                        <p className="font-bold text-base md:text-lg">
+                          {product.stock}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              
-              {filteredOpnameProducts.length === 0 && (
-                <p className="text-center text-gray-500 py-8">
-                  Memuat produk...
-                </p>
-              )}
+                )}
+              />
             </div>
           </CardContent>
         </Card>
