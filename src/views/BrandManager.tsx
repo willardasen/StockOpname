@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useBrandStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SearchInput } from '@/components/common';
 import { Trash2, Plus, Database, Palette } from 'lucide-react';
 
 export function BrandManager() {
@@ -37,6 +38,12 @@ export function BrandManager() {
   const [selectedBrandForNumber, setSelectedBrandForNumber] = useState('');
 
   const [newColor, setNewColor] = useState('');
+
+  // Search states
+  const [searchBrand, setSearchBrand] = useState('');
+  const [searchBrandType, setSearchBrandType] = useState('');
+  const [searchTypeNumber, setSearchTypeNumber] = useState('');
+  const [searchColor, setSearchColor] = useState('');
 
   // Confirm Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -113,6 +120,37 @@ export function BrandManager() {
       }
   }
 
+  // Filtered data
+  const filteredBrands = useMemo(() => {
+    if (!searchBrand) return brands;
+    const q = searchBrand.toLowerCase();
+    return brands.filter(b => b.name.toLowerCase().includes(q));
+  }, [brands, searchBrand]);
+
+  const filteredBrandTypes = useMemo(() => {
+    if (!searchBrandType) return brandTypes;
+    const q = searchBrandType.toLowerCase();
+    return brandTypes.filter(bt => {
+      const parentBrand = brands.find(b => b.id === bt.brand_id);
+      return bt.name.toLowerCase().includes(q) || (parentBrand?.name.toLowerCase().includes(q) ?? false);
+    });
+  }, [brandTypes, brands, searchBrandType]);
+
+  const filteredTypeNumbers = useMemo(() => {
+    if (!searchTypeNumber) return typeNumbers;
+    const q = searchTypeNumber.toLowerCase();
+    return typeNumbers.filter(tn => {
+      const parentBrand = brands.find(b => b.id === tn.brand_id);
+      return tn.name.toLowerCase().includes(q) || (parentBrand?.name.toLowerCase().includes(q) ?? false);
+    });
+  }, [typeNumbers, brands, searchTypeNumber]);
+
+  const filteredColors = useMemo(() => {
+    if (!searchColor) return colors;
+    const q = searchColor.toLowerCase();
+    return colors?.filter(c => c.name.toLowerCase().includes(q)) ?? [];
+  }, [colors, searchColor]);
+
   const selectClass = "flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-w-xs";
 
   return (
@@ -177,11 +215,16 @@ export function BrandManager() {
                 </Button>
               </form>
               
+              <SearchInput
+                onSearch={setSearchBrand}
+                placeholder="Cari brand..."
+              />
+
               <div className="border rounded-md divide-y max-h-[500px] overflow-y-auto">
-                {brands.length === 0 ? (
-                  <div className="p-4 text-center text-gray-500 text-sm">Belum ada data brand</div>
+                {filteredBrands.length === 0 ? (
+                  <div className="p-4 text-center text-gray-500 text-sm">{searchBrand ? 'Tidak ada hasil pencarian' : 'Belum ada data brand'}</div>
                 ) : (
-                  brands.map((item) => (
+                  filteredBrands.map((item) => (
                     <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
                       <div>
                         <span className="font-medium">{item.name}</span>
@@ -240,11 +283,16 @@ export function BrandManager() {
                 </Button>
               </form>
 
+              <SearchInput
+                onSearch={setSearchBrandType}
+                placeholder="Cari tipe brand..."
+              />
+
               <div className="border rounded-md divide-y max-h-[500px] overflow-y-auto">
-                {brandTypes.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">Belum ada data tipe brand</div>
+                {filteredBrandTypes.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">{searchBrandType ? 'Tidak ada hasil pencarian' : 'Belum ada data tipe brand'}</div>
                 ) : (
-                  brandTypes.map((item) => {
+                  filteredBrandTypes.map((item) => {
                     const parentBrand = brands.find(b => b.id === item.brand_id);
                     return (
                         <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
@@ -308,11 +356,16 @@ export function BrandManager() {
                 </Button>
               </form>
 
+              <SearchInput
+                onSearch={setSearchTypeNumber}
+                placeholder="Cari no. tipe..."
+              />
+
               <div className="border rounded-md divide-y max-h-[500px] overflow-y-auto">
-                {typeNumbers.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500 text-sm">Belum ada data no. tipe</div>
+                {filteredTypeNumbers.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">{searchTypeNumber ? 'Tidak ada hasil pencarian' : 'Belum ada data no. tipe'}</div>
                 ) : (
-                  typeNumbers.map((item) => {
+                  filteredTypeNumbers.map((item) => {
                     const parentBrand = brands.find(b => b.id === item.brand_id);
                     return (
                         <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
@@ -367,11 +420,16 @@ export function BrandManager() {
                         </Button>
                     </form>
 
+                    <SearchInput
+                      onSearch={setSearchColor}
+                      placeholder="Cari warna..."
+                    />
+
                     <div className="border rounded-md divide-y max-h-[500px] overflow-y-auto">
-                        {colors && colors.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500 text-sm">Belum ada data warna</div>
+                        {filteredColors.length === 0 ? (
+                            <div className="p-4 text-center text-gray-500 text-sm">{searchColor ? 'Tidak ada hasil pencarian' : 'Belum ada data warna'}</div>
                         ) : (
-                            colors?.map((item) => (
+                            filteredColors.map((item) => (
                                 <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
                                     <span>{item.name}</span>
                                     <Button 
