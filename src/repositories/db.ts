@@ -233,3 +233,31 @@ export const closeDb = async (): Promise<void> => {
         dbInstance = null;
     }
 };
+
+export const resetDatabase = async (): Promise<void> => {
+    const db = await getDb();
+
+    // Disable foreign key constraints temporarily
+    await db.execute("PRAGMA foreign_keys = OFF;");
+
+    try {
+        await db.execute("DELETE FROM transactions;");
+        await db.execute("DELETE FROM global_opname;");
+        await db.execute("DELETE FROM type_numbers;");
+        await db.execute("DELETE FROM brand_types;");
+        await db.execute("DELETE FROM products;");
+        await db.execute("DELETE FROM brands;");
+        await db.execute("DELETE FROM colors;");
+
+        // Optionally keep users or delete them too. 
+        // If we delete users, we should probably re-create admin
+        await db.execute("DELETE FROM users WHERE username != 'admin';");
+
+        // Reset auto increment counters
+        await db.execute("DELETE FROM sqlite_sequence WHERE name IN ('transactions', 'global_opname', 'type_numbers', 'brand_types', 'products', 'brands', 'colors');");
+
+    } finally {
+        // Re-enable foreign key constraints
+        await db.execute("PRAGMA foreign_keys = ON;");
+    }
+};

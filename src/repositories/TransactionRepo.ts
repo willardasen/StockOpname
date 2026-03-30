@@ -104,19 +104,40 @@ export const TransactionRepo = {
             [newStock, input.product_id]
         );
 
+        // 3.5. Validate User ID to prevent Foreign Key Error (if DB was reset but localstorage was not)
+        let validUserId = input.user_id;
+        const userCheck = await db.select<{count: number}[]>("SELECT COUNT(*) as count FROM users WHERE id = ?", [validUserId]);
+        if (userCheck[0].count === 0) {
+            const firstUser = await db.select<{id: number}[]>("SELECT id FROM users LIMIT 1");
+            if (firstUser.length > 0) {
+                validUserId = firstUser[0].id;
+            }
+        }
+
         // 4. Create transaction record
-        await db.execute(
-            `INSERT INTO transactions (product_id, user_id, type, qty, current_stock_snapshot, note)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [
-                input.product_id,
-                input.user_id,
-                input.type,
-                input.qty,
-                newStock, // Snapshot of stock AFTER transaction
-                input.note || null
-            ]
-        );
+        let query = `INSERT INTO transactions (product_id, user_id, type, qty, current_stock_snapshot, note`;
+        let valuesStr = `VALUES (?, ?, ?, ?, ?, ?`;
+        let params: (string | number | null)[] = [
+            input.product_id,
+            validUserId,
+            input.type,
+            input.qty,
+            newStock,
+            input.note || null
+        ];
+
+        if (input.created_at) {
+            query += `, created_at`;
+            valuesStr += `, ?`;
+            const timeStr = new Date().toTimeString().split(' ')[0];
+            const datetimeStr = input.created_at.includes(':') ? input.created_at : `${input.created_at} ${timeStr}`;
+            params.push(datetimeStr);
+        }
+
+        query += `)`;
+        valuesStr += `)`;
+
+        await db.execute(`${query} ${valuesStr}`, params);
 
         return true;
     },

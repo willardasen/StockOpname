@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
 import { Button } from '@/components/ui/button';
 import { invoke } from '@tauri-apps/api/core';
-import { save, open } from '@tauri-apps/plugin-dialog';
+import { save, open, ask, message } from '@tauri-apps/plugin-dialog';
 import { 
   Package, 
   LayoutDashboard, 
@@ -15,7 +15,8 @@ import {
   X,
   PackagePlus,
   PackageMinus,
-  TrendingUp
+  TrendingUp,
+  Trash2
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -42,10 +43,10 @@ export function Layout() {
       
       if (filePath) {
         await invoke('backup_database', { destPath: filePath });
-        alert('Backup berhasil disimpan!');
+        await message('Backup berhasil disimpan!', { title: 'Sukses', kind: 'info' });
       }
     } catch (error) {
-      alert(`Backup gagal: ${error}`);
+      await message(`Backup gagal: ${error}`, { title: 'Error', kind: 'error' });
     }
   };
 
@@ -60,10 +61,12 @@ export function Layout() {
       });
       
       if (filePath) {
-        const confirmImport = window.confirm(
+        // Use Tauri's ask dialog for confirmation
+        const confirmImport = await ask(
           'PERINGATAN: Import database akan mengganti semua data yang ada.\n\n' +
           'Pastikan Anda sudah backup data sebelumnya.\n\n' +
-          'Lanjutkan import?'
+          'Lanjutkan import?',
+          { title: 'Konfirmasi Import', kind: 'warning' }
         );
         
         if (confirmImport) {
@@ -77,12 +80,32 @@ export function Layout() {
           // Reinitialize database connection with new data
           await initializeDatabase();
           
-          alert('Import berhasil! Aplikasi akan di-refresh.');
+          await message('Import berhasil! Aplikasi akan di-refresh.', { title: 'Sukses', kind: 'info' });
           window.location.reload();
         }
       }
     } catch (error) {
-      alert(`Import gagal: ${error}`);
+      await message(`Import gagal: ${error}`, { title: 'Error', kind: 'error' });
+    }
+  };
+
+  const handleReset = async () => {
+    const confirmDelete = await ask(
+      'PERINGATAN: Tindakan ini akan MENGHAPUS SEMUA DATA transaksi, produk, dan stok opname.\n\n' +
+      'Data user admin tidak akan dihapus.\n\n' +
+      'Apakah Anda yakin ingin melanjutkan?',
+      { title: 'Konfirmasi Reset Data', kind: 'warning' }
+    );
+
+    if (confirmDelete) {
+      try {
+        const { resetDatabase } = await import('@/repositories');
+        await resetDatabase();
+        await message('Database berhasil di-reset!', { title: 'Sukses', kind: 'info' });
+        window.location.reload();
+      } catch (error) {
+        await message(`Reset database gagal: ${error}`, { title: 'Error', kind: 'error' });
+      }
     }
   };
 
@@ -169,6 +192,15 @@ export function Layout() {
             >
               <Download className="mr-2 h-4 w-4" />
               Import Database
+            </Button>
+
+            <Button 
+                variant="ghost" 
+                className="w-full justify-start text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/10"
+                onClick={handleReset}
+            >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Reset Data
             </Button>
             
             <Button 

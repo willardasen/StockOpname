@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { ProductRepo } from '@/repositories';
+import { ProductRepo, TransactionRepo } from '@/repositories';
 import type { Product, CreateProductInput, UpdateProductInput } from '@/types/database';
+import { useAuthStore } from './authStore';
 
 interface ProductState {
     products: Product[];
@@ -92,7 +93,40 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ isLoading: true, error: null });
 
         try {
-            const product = await ProductRepo.createProduct(input);
+            const initialStock = input.stock || 0;
+            const transactionDate = input.transaction_date;
+            
+            const productInput = { ...input, stock: 0 };
+            const product = await ProductRepo.createProduct(productInput);
+
+            if (initialStock > 0) {
+                let user = useAuthStore.getState().user;
+                if (!user) {
+                    // fallback parse from localstorage
+                    const savedUser = localStorage.getItem('user');
+                    if (savedUser) user = JSON.parse(savedUser);
+                }
+
+                if (user) {
+                    try {
+                        await TransactionRepo.createTransaction({
+                            product_id: product.id,
+                            user_id: user.id,
+                            type: 'IN',
+                            qty: initialStock,
+                            note: 'Stok Awal',
+                            created_at: transactionDate
+                        });
+                        product.stock = initialStock;
+                    } catch (txError) {
+                        console.error("Failed to create initial stock transaction:", txError);
+                        alert(`Gagal membuat transaksi stok awal. \nProductID: ${product?.id}, UserID: ${user?.id}\nError: ${txError instanceof Error ? txError.message : String(txError)}`);
+                    }
+                } else {
+                    alert("Gagal membuat stok awal: User tidak ditemukan.");
+                }
+            }
+
             const { products } = get();
             set({
                 products: [...products, product],
@@ -100,8 +134,11 @@ export const useProductStore = create<ProductState>((set, get) => ({
             });
             return product;
         } catch (error) {
+            console.error("Failed to create product:", error);
+            const errMsg = error instanceof Error ? error.message : 'Gagal menambah produk';
+            alert(`Gagal: ${errMsg}`);
             set({
-                error: error instanceof Error ? error.message : 'Gagal menambah produk',
+                error: errMsg,
                 isLoading: false
             });
             return null;

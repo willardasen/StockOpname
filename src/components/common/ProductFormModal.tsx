@@ -219,7 +219,33 @@ export function ProductFormModal({
                 </select>
               </div>
 
-              <div>
+              {!isEditing && (
+                <div className="col-span-2 sm:col-span-1">
+                  <Label htmlFor="transaction_date">Tanggal Stok Masuk</Label>
+                  <Input
+                    id="transaction_date"
+                    type="date"
+                    value={formData.transaction_date || ''}
+                    onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+                    className="relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  />
+                </div>
+              )}
+
+              <div className="col-span-2 sm:col-span-1">
+                <Label htmlFor="min_stock">Min Stok</Label>
+                <Input
+                  id="min_stock"
+                  type="text"
+                  inputMode="numeric"
+                  value={formatNumber(formData.min_stock)}
+                  onChange={(e) => setFormData({ ...formData, min_stock: parseNumber(e.target.value) })}
+                  placeholder="0"
+                  className="placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="col-span-2 sm:col-span-1">
                 <Label htmlFor="stock">Stok</Label>
                 <Input
                   id="stock"
@@ -272,18 +298,6 @@ export function ProductFormModal({
                         Total: {formatNumber(formData.stock)} Pcs
                     </p>
                 )}
-              </div>
-              <div>
-                <Label htmlFor="min_stock">Min Stok</Label>
-                <Input
-                  id="min_stock"
-                  type="text"
-                   inputMode="numeric"
-                  value={formatNumber(formData.min_stock)}
-                  onChange={(e) => setFormData({ ...formData, min_stock: parseNumber(e.target.value) })}
-                   placeholder="0"
-                   className="placeholder:text-muted-foreground"
-                />
               </div>
             </div>
 
