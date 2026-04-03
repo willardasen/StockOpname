@@ -41,6 +41,7 @@ interface TransactionFormProps {
   onSubmit: () => void;
   onReset: () => void;
   isSaving: boolean;
+  isEditing?: boolean;
 }
 
 export const StockTransactionForm = memo(({
@@ -64,6 +65,7 @@ export const StockTransactionForm = memo(({
   onSubmit,
   onReset,
   isSaving,
+  isEditing = false,
 }: TransactionFormProps) => {
   const isStockIn = type === 'IN';
   const themeColor = isStockIn ? 'text-green-600' : 'text-orange-600';
@@ -73,7 +75,9 @@ export const StockTransactionForm = memo(({
     <Card>
       <CardHeader>
         <CardTitle className={`text-lg ${themeColor}`}>
-          {isStockIn ? 'Form Barang Masuk' : 'Form Barang Keluar'}
+          {isEditing 
+            ? `Edit Transaksi ${isStockIn ? 'Masuk' : 'Keluar'}` 
+            : `Form Barang ${isStockIn ? 'Masuk' : 'Keluar'}`}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -103,8 +107,9 @@ export const StockTransactionForm = memo(({
                   setSearchKeyword(e.target.value);
                 }}
                 onKeyDown={(e) => e.key === 'Enter' && onSearch()}
+                disabled={isEditing}
               />
-              <Button variant="outline" onClick={onSearch} disabled={isSearching}>
+              <Button variant="outline" onClick={onSearch} disabled={isSearching || isEditing}>
                 <Search className="h-4 w-4 mr-2" />
                 Cek Barang
               </Button>
@@ -231,11 +236,11 @@ export const StockTransactionForm = memo(({
         <div className="mt-6 flex gap-4">
           <Button onClick={onSubmit} disabled={isSaving || !selectedProduct} className={buttonColor}>
             <Save className="h-4 w-4 mr-2" />
-            Simpan
+            {isEditing ? 'Update Transaksi' : 'Simpan'}
           </Button>
           <Button variant="outline" onClick={onReset}>
             <RotateCcw className="h-4 w-4 mr-2" />
-            Reset
+            Batal
           </Button>
         </div>
       </CardContent>

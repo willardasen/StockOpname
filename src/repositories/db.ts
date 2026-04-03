@@ -225,6 +225,42 @@ export const initializeDatabase = async (): Promise<void> => {
             console.error("Migration global_opname failed:", e);
         }
     }
+
+    // 5. AUTO-REPAIR: Create missing "Stok Awal" transactions for products with stock but no IN transaction
+    // This fixes data created by the old edit form that directly set stock without creating transactions
+    try {
+        const orphanedProducts = await db.select<{ id: number; name: string; stock: number; created_at: string }[]>(
+            `SELECT p.id, p.name, p.stock, p.created_at
+             FROM products p
+             WHERE p.is_active = 1
+               AND p.stock > 0
+               AND NOT EXISTS (
+                   SELECT 1 FROM transactions t
+                   WHERE t.product_id = p.id AND t.type = 'IN'
+               )`
+        );
+
+        if (orphanedProducts.length > 0) {
+            console.log(`Found ${orphanedProducts.length} products with stock but no IN transaction. Repairing...`);
+
+            // Get first user ID for the transaction author
+            const firstUser = await db.select<{ id: number }[]>("SELECT id FROM users LIMIT 1");
+            const userId = firstUser.length > 0 ? firstUser[0].id : 1;
+
+            for (const product of orphanedProducts) {
+                await db.execute(
+                    `INSERT INTO transactions (product_id, user_id, type, qty, current_stock_snapshot, note, created_at)
+                     VALUES (?, ?, 'IN', ?, ?, 'Stok Awal', ?)`,
+                    [product.id, userId, product.stock, product.stock, product.created_at]
+                );
+                console.log(`  Repaired: "${product.name}" — created IN transaction for ${product.stock} pcs`);
+            }
+
+            console.log('Stock transaction repair completed.');
+        }
+    } catch (e) {
+        console.error("Auto-repair missing transactions failed:", e);
+    }
 };
 
 export const closeDb = async (): Promise<void> => {

@@ -1,34 +1,33 @@
 import { getDb } from "./db";
 import type { Product, CreateProductInput, UpdateProductInput } from "@/types/database";
 
-const SEARCH_LIMIT = 50; // Performance limit for search results
+
+const PRODUCT_LIMIT = 5000;
 
 export const ProductRepo = {
     /**
      * Get all active products with optional limit
      */
-    async getAllProducts(limit?: number): Promise<Product[]> {
+    async getAllProducts(limit: number = PRODUCT_LIMIT): Promise<Product[]> {
         const db = await getDb();
 
-        let query = `
+        const query = `
             SELECT p.*, b.pcs_per_box 
             FROM products p 
             LEFT JOIN brands b ON p.brand = b.name 
             WHERE p.is_active = 1 
             ORDER BY p.name ASC
+            LIMIT ?
         `;
-        if (limit) {
-            query += ` LIMIT ${limit}`;
-        }
 
-        return db.select<Product[]>(query);
+        return db.select<Product[]>(query, [limit]);
     },
 
     /**
      * Search products by name, brand, or type_number
      * Limited to 50 results for performance
      */
-    async searchProducts(keyword: string, limit: number = SEARCH_LIMIT): Promise<Product[]> {
+    async searchProducts(keyword: string): Promise<Product[]> {
         const db = await getDb();
         const searchTerm = `%${keyword}%`;
 
@@ -40,7 +39,7 @@ export const ProductRepo = {
              AND (p.name LIKE ? OR p.brand LIKE ? OR p.type_number LIKE ? OR p.color LIKE ?)
              ORDER BY p.name ASC
              LIMIT ?`,
-            [searchTerm, searchTerm, searchTerm, searchTerm, limit]
+            [searchTerm, searchTerm, searchTerm, searchTerm, PRODUCT_LIMIT]
         );
     },
 
@@ -128,16 +127,50 @@ export const ProductRepo = {
             values.push(input.min_stock);
         }
 
-        if (updates.length === 0) {
-            return this.getProductById(input.id);
+        if (updates.length > 0) {
+            values.push(input.id);
+            await db.execute(
+                `UPDATE products SET ${updates.join(", ")} WHERE id = ?`,
+                values
+            );
         }
 
-        values.push(input.id);
+        // Update the initial "Stok Awal" transaction if date or note is provided
+        if (input.transaction_date !== undefined || input.note !== undefined) {
+            // Find the Stok Awal transaction (usually the first IN transaction)
+            const stokAwalTx = await db.select<{ id: number; created_at: string; note: string }[]>(
+                "SELECT id, created_at, note FROM transactions WHERE product_id = ? AND type = 'IN' ORDER BY id ASC LIMIT 1",
+                [input.id]
+            );
 
-        await db.execute(
-            `UPDATE products SET ${updates.join(", ")} WHERE id = ?`,
-            values
-        );
+            if (stokAwalTx.length > 0) {
+                const txId = stokAwalTx[0].id;
+                const txUpdates: string[] = [];
+                const txValues: (string | number)[] = [];
+
+                if (input.transaction_date !== undefined) {
+                    txUpdates.push("created_at = ?");
+                    const timeStr = stokAwalTx[0].created_at.split(' ')[1] || '00:00:00';
+                    const datetimeStr = input.transaction_date.includes(':') ? input.transaction_date : `${input.transaction_date} ${timeStr}`;
+                    // Update product's created_at to match
+                    await db.execute("UPDATE products SET created_at = ? WHERE id = ?", [datetimeStr, input.id]);
+                    txValues.push(datetimeStr);
+                }
+                
+                if (input.note !== undefined) {
+                    txUpdates.push("note = ?");
+                    txValues.push(input.note);
+                }
+
+                if (txUpdates.length > 0) {
+                    txValues.push(txId);
+                    await db.execute(
+                        `UPDATE transactions SET ${txUpdates.join(", ")} WHERE id = ?`,
+                        txValues
+                    );
+                }
+            }
+        }
 
         return this.getProductById(input.id);
     },
@@ -231,5 +264,38 @@ export const ProductRepo = {
         const totalStock = stockResult[0].total;
 
         return { totalStock, pcsPerBox };
+    },
+
+    /**
+     * Repair orphaned stock: create missing "Stok Awal" IN transactions
+     * for products that have stock > 0 but no corresponding IN transaction.
+     * Returns the number of products repaired.
+     */
+    async repairOrphanedStock(userId: number): Promise<number> {
+        const db = await getDb();
+
+        const orphanedProducts = await db.select<{ id: number; name: string; stock: number; created_at: string }[]>(
+            `SELECT p.id, p.name, p.stock, p.created_at
+             FROM products p
+             WHERE p.is_active = 1
+               AND p.stock > 0
+               AND NOT EXISTS (
+                   SELECT 1 FROM transactions t
+                   WHERE t.product_id = p.id AND t.type = 'IN'
+               )`
+        );
+
+        if (orphanedProducts.length === 0) return 0;
+
+        for (const product of orphanedProducts) {
+            await db.execute(
+                `INSERT INTO transactions (product_id, user_id, type, qty, current_stock_snapshot, note, created_at)
+                 VALUES (?, ?, 'IN', ?, ?, 'Stok Awal', ?)`,
+                [product.id, userId, product.stock, product.stock, product.created_at]
+            );
+            console.log(`Repaired orphaned stock: "${product.name}" — ${product.stock} pcs`);
+        }
+
+        return orphanedProducts.length;
     }
 };

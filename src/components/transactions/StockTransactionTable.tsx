@@ -1,8 +1,8 @@
-import { memo } from 'react';
+import { memo, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { VirtualTable, ProductFilterBar, ProductFilter } from '@/components/common';
-import { Search, Filter, RotateCcw, Upload, Pencil, Trash2 } from 'lucide-react';
+import { Search, Filter, RotateCcw, Upload, Pencil, Trash2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { TransactionWithProduct } from '@/types/database';
 
@@ -12,6 +12,8 @@ const formatNumber = (num: number | string | undefined): string => {
     const cleanNum = num.toString().replace(/\D/g, '');
     return new Intl.NumberFormat('id-ID').format(Number(cleanNum));
 };
+
+const ITEMS_PER_PAGE = 25;
 
 interface TransactionHistoryTableProps {
     type: 'IN' | 'OUT';
@@ -26,6 +28,7 @@ interface TransactionHistoryTableProps {
     onResetFilter: () => void;
     onProductFilterChange: (filter: ProductFilter) => void;
     onExport: () => void;
+    onEdit: (transaction: TransactionWithProduct) => void;
     onDelete: (id: number) => void;
 }
 
@@ -42,10 +45,50 @@ export const StockTransactionTable = memo(({
     onResetFilter,
     onProductFilterChange,
     onExport,
+    onEdit,
     onDelete,
 }: TransactionHistoryTableProps) => {
     const isStockIn = type === 'IN';
     const qtyColor = isStockIn ? 'text-green-600' : 'text-orange-600';
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Calculate paginated data
+    const totalItems = data.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+
+    // Reset to page 1 when data changes (e.g., filter applied)
+    const dataKey = useMemo(() => data.map(d => d.id).join(','), [data]);
+    useMemo(() => {
+        setCurrentPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dataKey]);
+
+    const paginatedData = useMemo(() => {
+        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+        return data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    }, [data, currentPage]);
+
+    const startItem = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+    const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+
+    // Generate visible page numbers
+    const getPageNumbers = () => {
+        const pages: (number | '...')[] = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+            pages.push(1);
+            if (currentPage > 3) pages.push('...');
+            const start = Math.max(2, currentPage - 1);
+            const end = Math.min(totalPages - 1, currentPage + 1);
+            for (let i = start; i <= end; i++) pages.push(i);
+            if (currentPage < totalPages - 2) pages.push('...');
+            pages.push(totalPages);
+        }
+        return pages;
+    };
 
     return (
         <div className="space-y-4">
@@ -91,7 +134,7 @@ export const StockTransactionTable = memo(({
             <ProductFilterBar onFilterChange={onProductFilterChange} />
 
             <VirtualTable
-                data={data}
+                data={paginatedData}
                 columns={[
                     { key: 'created_at', header: 'Tanggal', width: 100, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy') },
                     { key: 'product_name', header: 'Nama Produk', width: 200 },
@@ -116,7 +159,12 @@ export const StockTransactionTable = memo(({
                     {
                         key: 'actions', header: 'Aksi', width: 100, align: 'center' as const, render: (_, row) => (
                             <div className="flex items-center justify-center gap-2">
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={() => onEdit(row as TransactionWithProduct)}
+                                >
                                     <Pencil className="h-4 w-4" />
                                 </Button>
                                 <Button
@@ -131,8 +179,81 @@ export const StockTransactionTable = memo(({
                         )
                     },
                 ]}
-                emptyMessage="Belum ada data transaksi hari ini"
+                emptyMessage="Belum ada data transaksi"
             />
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between border-t pt-4">
+                    <p className="text-sm text-muted-foreground">
+                        Menampilkan <span className="font-medium">{startItem}</span> - <span className="font-medium">{endItem}</span> dari <span className="font-medium">{formatNumber(totalItems)}</span> transaksi
+                    </p>
+                    <div className="flex items-center gap-1">
+                        {/* First page */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            title="Halaman Pertama"
+                        >
+                            <ChevronsLeft className="h-4 w-4" />
+                        </Button>
+                        {/* Previous page */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            title="Halaman Sebelumnya"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+
+                        {/* Page numbers */}
+                        {getPageNumbers().map((page, idx) =>
+                            page === '...' ? (
+                                <span key={`dots-${idx}`} className="px-2 text-muted-foreground text-sm">…</span>
+                            ) : (
+                                <Button
+                                    key={page}
+                                    variant={currentPage === page ? 'default' : 'outline'}
+                                    size="icon"
+                                    className={`h-8 w-8 text-sm ${currentPage === page ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                                    onClick={() => setCurrentPage(page as number)}
+                                >
+                                    {page}
+                                </Button>
+                            )
+                        )}
+
+                        {/* Next page */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            title="Halaman Selanjutnya"
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
+                        {/* Last page */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            title="Halaman Terakhir"
+                        >
+                            <ChevronsRight className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 });

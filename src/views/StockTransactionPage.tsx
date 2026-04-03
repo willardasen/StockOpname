@@ -16,7 +16,7 @@ interface StockTransactionPageProps {
 
 export function StockTransactionPage({ type }: StockTransactionPageProps) {
     const { user } = useAuthStore();
-    const { createTransaction, isLoading: isSaving } = useTransactionStore();
+    const { createTransaction, updateTransaction, isLoading: isSaving } = useTransactionStore();
 
     // Form state
     const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -28,6 +28,7 @@ export function StockTransactionPage({ type }: StockTransactionPageProps) {
     const [note, setNote] = useState('');
     const [showResults, setShowResults] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [editingTransactionId, setEditingTransactionId] = useState<number | null>(null);
 
     // Table state
     const [recentTransactions, setRecentTransactions] = useState<TransactionWithProduct[]>([]);
@@ -114,6 +115,37 @@ export function StockTransactionPage({ type }: StockTransactionPageProps) {
         setPcsQty(0);
         setNote('');
         setShowResults(false);
+        setEditingTransactionId(null);
+    }, []);
+
+    // Handle Edit button click from table
+    const handleEditTransaction = useCallback(async (transaction: TransactionWithProduct) => {
+        // Fetch full product details first
+        try {
+            const product = await ProductRepo.getProductById(transaction.product_id);
+            if (product) {
+                setEditingTransactionId(transaction.id);
+                setSelectedProduct(product);
+                setSearchKeyword(product.name);
+                setDate(transaction.created_at.split(' ')[0] || format(new Date(), 'yyyy-MM-dd'));
+                
+                const pcsPerBox = product.pcs_per_box || 1;
+                if (pcsPerBox > 1) {
+                    setBoxQty(Math.floor(transaction.qty / pcsPerBox));
+                    setPcsQty(transaction.qty % pcsPerBox);
+                } else {
+                    setBoxQty(0);
+                    setPcsQty(transaction.qty);
+                }
+                
+                setNote(transaction.note || '');
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        } catch (error) {
+            console.error("Failed to load product for edit", error);
+            alert("Gagal memuat detail produk untuk diedit");
+        }
     }, []);
 
     // Submit handler
@@ -144,22 +176,40 @@ export function StockTransactionPage({ type }: StockTransactionPageProps) {
             return;
         }
 
-        const success = await createTransaction({
-            product_id: selectedProduct.id,
-            user_id: user.id,
-            type: type,
-            qty: totalQty,
-            note: trimmedNote
-        });
+        if (editingTransactionId) {
+            const success = await updateTransaction({
+                id: editingTransactionId,
+                qty: totalQty,
+                note: trimmedNote,
+                created_at: date // Assumes the backend will merge the original time
+            });
 
-        if (success) {
-            alert(type === 'IN' ? 'Stok masuk berhasil disimpan!' : 'Stok keluar berhasil disimpan!');
-            handleReset();
-            loadTransactions();
+            if (success) {
+                alert('Transaksi berhasil diupdate!');
+                handleReset();
+                loadTransactions();
+            } else {
+                alert('Gagal mengupdate transaksi!');
+            }
         } else {
-            alert(type === 'IN' ? 'Gagal menyimpan stok masuk!' : 'Gagal menyimpan stok keluar!');
+            const success = await createTransaction({
+                product_id: selectedProduct.id,
+                user_id: user.id,
+                type: type,
+                qty: totalQty,
+                note: trimmedNote,
+                created_at: date 
+            });
+
+            if (success) {
+                alert(type === 'IN' ? 'Stok masuk berhasil disimpan!' : 'Stok keluar berhasil disimpan!');
+                handleReset();
+                loadTransactions();
+            } else {
+                alert(type === 'IN' ? 'Gagal menyimpan stok masuk!' : 'Gagal menyimpan stok keluar!');
+            }
         }
-    }, [selectedProduct, boxQty, pcsQty, note, user, createTransaction, type, handleReset, loadTransactions]);
+    }, [selectedProduct, boxQty, pcsQty, note, date, user, createTransaction, updateTransaction, type, handleReset, loadTransactions, editingTransactionId]);
 
     const handleDeleteTransaction = useCallback(async (id: number) => {
         showConfirm('Apakah Anda yakin ingin menghapus transaksi ini? Stok akan dikembalikan.', async () => {
@@ -251,6 +301,7 @@ export function StockTransactionPage({ type }: StockTransactionPageProps) {
                 onSubmit={handleSubmit}
                 onReset={handleReset}
                 isSaving={isSaving}
+                isEditing={!!editingTransactionId}
             />
 
             <StockTransactionTable
@@ -266,6 +317,7 @@ export function StockTransactionPage({ type }: StockTransactionPageProps) {
                 onResetFilter={handleResetFilter}
                 onProductFilterChange={setTableFilter}
                 onExport={handleExport}
+                onEdit={handleEditTransaction}
                 onDelete={handleDeleteTransaction}
             />
 

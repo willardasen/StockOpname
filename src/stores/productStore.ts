@@ -39,8 +39,27 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ isLoading: true, error: null });
 
         try {
+            const { searchKeyword } = get();
+            if (searchKeyword.trim() !== '') {
+                const products = await ProductRepo.searchProducts(searchKeyword);
+                set({ products, isLoading: false });
+                return;
+            }
             const products = await ProductRepo.getAllProducts();
             const totalCount = await ProductRepo.getProductCount();
+
+            // Auto-repair: create missing "Stok Awal" transactions for orphaned stock
+            let user = useAuthStore.getState().user;
+            if (!user) {
+                const savedUser = localStorage.getItem('user');
+                if (savedUser) user = JSON.parse(savedUser);
+            }
+            if (user) {
+                const repaired = await ProductRepo.repairOrphanedStock(user.id);
+                if (repaired > 0) {
+                    console.log(`Auto-repaired ${repaired} products with missing stock transactions`);
+                }
+            }
 
             set({ products, totalCount, isLoading: false });
         } catch (error) {
@@ -56,7 +75,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
         try {
             if (keyword.trim() === '') {
-                const products = await ProductRepo.getAllProducts(100);
+                const products = await ProductRepo.getAllProducts();
                 set({ products, isLoading: false });
             } else {
                 const products = await ProductRepo.searchProducts(keyword);
@@ -114,7 +133,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
                             user_id: user.id,
                             type: 'IN',
                             qty: initialStock,
-                            note: 'Stok Awal',
+                            note: input.note?.trim() || 'Stok Awal',
                             created_at: transactionDate
                         });
                         product.stock = initialStock;

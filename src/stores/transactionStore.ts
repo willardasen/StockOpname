@@ -3,6 +3,7 @@ import { TransactionRepo } from '@/repositories';
 import type {
     TransactionWithProduct,
     CreateTransactionInput,
+    UpdateTransactionInput,
     StockAdjustmentInput,
     TransactionType
 } from '@/types/database';
@@ -18,6 +19,7 @@ interface TransactionState {
     loadTransactions: (productId?: number, userId?: number, type?: TransactionType) => Promise<void>;
     loadRecentTransactions: (limit?: number) => Promise<void>;
     createTransaction: (input: CreateTransactionInput) => Promise<boolean>;
+    updateTransaction: (input: UpdateTransactionInput) => Promise<boolean>;
     adjustStock: (input: StockAdjustmentInput) => Promise<boolean>;
     getTransactionsByDateRange: (startDate: string, endDate: string) => Promise<TransactionWithProduct[]>;
     clearError: () => void;
@@ -67,6 +69,29 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
         } catch (error) {
             set({
                 error: error instanceof Error ? error.message : 'Gagal membuat transaksi',
+                isLoading: false
+            });
+            return false;
+        }
+    },
+
+    updateTransaction: async (input: UpdateTransactionInput) => {
+        set({ isLoading: true, error: null });
+
+        try {
+            const success = await TransactionRepo.updateTransaction(input);
+            if (success) {
+                // Reload transactions
+                const { loadTransactions } = get();
+                await loadTransactions();
+            } else {
+                set({ error: 'Transaksi tidak ditemukan atau gagal diupdate' });
+            }
+            set({ isLoading: false });
+            return success;
+        } catch (error) {
+            set({
+                error: error instanceof Error ? error.message : 'Gagal mengupdate transaksi',
                 isLoading: false
             });
             return false;

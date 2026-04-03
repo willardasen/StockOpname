@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, Trash2, X, Plus } from 'lucide-react';
 import type { CreateProductInput } from '@/types/database';
-import { useBrandStore } from '@/stores';
+import { useBrandStore, useProductStore } from '@/stores';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -51,6 +51,8 @@ export function ProductFormModal({
     colors,
     loadAll 
   } = useBrandStore();
+
+  const { products } = useProductStore();
 
   useEffect(() => {
     if (isOpen) {
@@ -113,6 +115,15 @@ export function ProductFormModal({
 
       // Validate numeric fields (allow 0 but check for null/undefined)
       if (formData.stock === undefined || formData.stock === null) { alert("Stok harus diisi!"); return; }
+
+      // Duplicate name check
+      const duplicateProduct = products.find(
+        p => p.name.toLowerCase() === formData.name.toLowerCase()
+      );
+      if (duplicateProduct && !isEditing) {
+        alert(`Produk dengan nama "${formData.name}" sudah ada!`);
+        return;
+      }
 
       onSubmit(e);
   };
@@ -219,18 +230,27 @@ export function ProductFormModal({
                 </select>
               </div>
 
-              {!isEditing && (
-                <div className="col-span-2 sm:col-span-1">
-                  <Label htmlFor="transaction_date">Tanggal Stok Masuk</Label>
-                  <Input
-                    id="transaction_date"
-                    type="date"
-                    value={formData.transaction_date || ''}
-                    onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                    className="relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                  />
-                </div>
-              )}
+              <div className="col-span-2 sm:col-span-1">
+                <Label htmlFor="transaction_date">Tanggal Stok Masuk</Label>
+                <Input
+                  id="transaction_date"
+                  type="date"
+                  value={formData.transaction_date || ''}
+                  onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
+                  className="relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                />
+              </div>
+
+              <div className="col-span-2">
+                <Label htmlFor="note">Catatan (Opsional)</Label>
+                <Input
+                  id="note"
+                    type="text"
+                    value={formData.note || ''}
+                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                  placeholder="Stok Awal"
+                />
+              </div>
 
               <div className="col-span-2 sm:col-span-1">
                 <Label htmlFor="min_stock">Min Stok</Label>
@@ -246,7 +266,7 @@ export function ProductFormModal({
               </div>
 
               <div className="col-span-2 sm:col-span-1">
-                <Label htmlFor="stock">Stok</Label>
+                <Label htmlFor="stock">Stok {isEditing && <span className="text-xs text-muted-foreground">(Read-only)</span>}</Label>
                 <Input
                   id="stock"
                   type="hidden"
@@ -262,12 +282,14 @@ export function ProductFormModal({
                                 inputMode="numeric"
                                 value={formatNumber(Math.floor((formData.stock || 0) / (pcsPerBox || 1)))}
                                 onChange={(e) => {
+                                    if (isEditing) return;
                                     const b = parseNumber(e.target.value);
                                     const p = (formData.stock || 0) % (pcsPerBox || 1);
                                     setFormData({ ...formData, stock: (b * (pcsPerBox || 1)) + p });
                                 }}
-                                className="placeholder:text-muted-foreground"
+                                className={`placeholder:text-muted-foreground ${isEditing ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                                 placeholder="0"
+                                readOnly={isEditing}
                             />
                             {pcsPerBox > 1 && (
                                 <div className="absolute right-3 top-2.5 text-xs text-muted-foreground">
@@ -284,18 +306,25 @@ export function ProductFormModal({
                             inputMode="numeric"
                             value={formatNumber((formData.stock || 0) % (pcsPerBox || 1))}
                             onChange={(e) => {
+                                if (isEditing) return;
                                 const p = parseNumber(e.target.value);
                                 const b = Math.floor((formData.stock || 0) / (pcsPerBox || 1));
                                 setFormData({ ...formData, stock: (b * (pcsPerBox || 1)) + p });
                             }}
-                            className="placeholder:text-muted-foreground"
+                            className={`placeholder:text-muted-foreground ${isEditing ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                             placeholder="0"
+                            readOnly={isEditing}
                         />
                     </div>
                 </div>
                 {pcsPerBox > 1 && (
                     <p className="text-xs text-muted-foreground mt-1">
                         Total: {formatNumber(formData.stock)} Pcs
+                    </p>
+                )}
+                {isEditing && (
+                    <p className="text-xs text-amber-600 mt-1">
+                        Ubah stok melalui menu Stok Masuk/Keluar
                     </p>
                 )}
               </div>

@@ -3,6 +3,7 @@ import type {
     TransactionWithProduct,
     TransactionType,
     CreateTransactionInput,
+    UpdateTransactionInput,
     StockAdjustmentInput,
 } from "@/types/database";
 
@@ -42,7 +43,7 @@ export const TransactionRepo = {
             params.push(type);
         }
 
-        query += " ORDER BY t.created_at DESC LIMIT 100";
+        query += " ORDER BY t.created_at DESC";
 
         return db.select<TransactionWithProduct[]>(query, params);
     },
@@ -138,6 +139,103 @@ export const TransactionRepo = {
         valuesStr += `)`;
 
         await db.execute(`${query} ${valuesStr}`, params);
+
+        return true;
+    },
+
+    /**
+     * Update an existing transaction
+     * Also recalculates and updates product stock automatically
+     */
+    async updateTransaction(input: UpdateTransactionInput): Promise<boolean> {
+        const db = await getDb();
+
+        // 1. Get the original transaction
+        const transactions = await db.select<TransactionWithProduct[]>(
+            "SELECT * FROM transactions WHERE id = ?",
+            [input.id]
+        );
+
+        if (transactions.length === 0) return false;
+        const originalTransaction = transactions[0];
+
+        // Do not allow editing adjustments easily due to complexity
+        if (originalTransaction.type === 'ADJUSTMENT') {
+            console.error("Editing ADJUSTMENT transactions is not fully supported via this method.");
+            return false;
+        }
+
+        // Prevent changing product entirely for simplicity in stock calc
+        const productId = originalTransaction.product_id;
+
+        // 2. Get current stock
+        const products = await db.select<{ stock: number }[]>(
+            "SELECT stock FROM products WHERE id = ?",
+            [productId]
+        );
+
+        if (products.length === 0) return false;
+        const currentStock = products[0].stock;
+
+        // 3. Calculate new stock based on diff
+        let newStock = currentStock;
+        const oldQty = originalTransaction.qty;
+        const newQty = input.qty !== undefined ? input.qty : oldQty;
+        const diff = newQty - oldQty;
+
+        if (diff !== 0) {
+            if (originalTransaction.type === 'IN') {
+                newStock += diff;
+            } else if (originalTransaction.type === 'OUT') {
+                newStock -= diff;
+            }
+
+            // Update product stock
+            await db.execute(
+                "UPDATE products SET stock = ? WHERE id = ?",
+                [newStock, productId]
+            );
+        }
+
+        // 4. Update transaction record
+        const updates: string[] = [];
+        const values: (string | number | null)[] = [];
+
+        if (input.qty !== undefined) {
+            updates.push("qty = ?");
+            values.push(input.qty);
+            
+            // Also update current_stock_snapshot for THIS transaction
+            // We just apply the diff to its old snapshot to keep it mostly accurate
+            if (originalTransaction.current_stock_snapshot !== null) {
+                updates.push("current_stock_snapshot = ?");
+                const newSnapshot = originalTransaction.type === 'IN' 
+                    ? originalTransaction.current_stock_snapshot + diff 
+                    : originalTransaction.current_stock_snapshot - diff;
+                values.push(newSnapshot);
+            }
+        }
+        
+        if (input.note !== undefined) {
+            updates.push("note = ?");
+            values.push(input.note || null);
+        }
+        
+        if (input.created_at !== undefined) {
+            updates.push("created_at = ?");
+            // handle time if not present
+            const timeStr = new Date().toTimeString().split(' ')[0];
+            const datetimeStr = input.created_at.includes(':') ? input.created_at : `${input.created_at} ${timeStr}`;
+            values.push(datetimeStr);
+        }
+
+        if (updates.length > 0) {
+            values.push(input.id);
+            await db.execute(
+                `UPDATE transactions SET ${updates.join(", ")} WHERE id = ?`,
+                values
+            );
+        }
 
         return true;
     },

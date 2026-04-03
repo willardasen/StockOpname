@@ -24,6 +24,7 @@ export function useProductForm() {
         stock: 0,
         min_stock: 5,
         transaction_date: format(new Date(), 'yyyy-MM-dd'),
+        note: '',
     });
 
     const resetForm = () => {
@@ -36,6 +37,7 @@ export function useProductForm() {
             stock: 0,
             min_stock: 5,
             transaction_date: format(new Date(), 'yyyy-MM-dd'),
+            note: '',
         });
     };
 
@@ -56,7 +58,8 @@ export function useProductForm() {
             color: product.color || '',
             stock: product.stock,
             min_stock: product.min_stock,
-            transaction_date: format(new Date(), 'yyyy-MM-dd'),
+            transaction_date: product.created_at ? product.created_at.split(' ')[0] : format(new Date(), 'yyyy-MM-dd'),
+            note: 'Stok Awal',
         });
         setIsEditing(true);
         setShowModal(true);
@@ -66,7 +69,9 @@ export function useProductForm() {
         e.preventDefault();
 
         if (isEditing && selectedProduct) {
-            await updateProduct({ id: selectedProduct.id, ...formData });
+            // When editing, exclude only stock (stock should only change via transactions)
+            const { stock: _stock, ...editData } = formData;
+            await updateProduct({ id: selectedProduct.id, ...editData });
         } else {
             await createProduct(formData);
         }

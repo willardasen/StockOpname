@@ -59,6 +59,7 @@ export interface CreateProductInput {
     stock?: number;
     min_stock?: number;
     transaction_date?: string;
+    note?: string;
 }
 
 export interface UpdateProductInput extends Partial<CreateProductInput> {
@@ -72,6 +73,10 @@ export interface CreateTransactionInput {
     qty: number;
     note?: string;
     created_at?: string;
+}
+
+export interface UpdateTransactionInput extends Partial<CreateTransactionInput> {
+    id: number;
 }
 
 export interface StockAdjustmentInput {
