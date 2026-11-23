@@ -113,7 +113,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
         try {
             const initialStock = input.stock || 0;
-            const transactionDate = input.transaction_date;
             
             const productInput = { ...input, stock: 0 };
             const product = await ProductRepo.createProduct(productInput);
@@ -133,8 +132,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
                             user_id: user.id,
                             type: 'IN',
                             qty: initialStock,
-                            note: input.note?.trim() || 'Stok Awal',
-                            created_at: transactionDate
+                            note: input.note?.trim() || 'Stok Awal'
                         });
                         product.stock = initialStock;
                     } catch (txError) {

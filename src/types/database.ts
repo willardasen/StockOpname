@@ -61,7 +61,6 @@ export interface CreateProductInput {
     size?: string;
     stock?: number;
     min_stock?: number;
-    transaction_date?: string;
     note?: string;
 }
 

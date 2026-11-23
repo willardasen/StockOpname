@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useProductStore } from '@/stores';
 import type { Product, CreateProductInput } from '@/types/database';
-import { format } from 'date-fns';
 
 export function useProductForm() {
     const {
@@ -24,7 +23,6 @@ export function useProductForm() {
         size: '',
         stock: 0,
         min_stock: 5,
-        transaction_date: format(new Date(), 'yyyy-MM-dd'),
         note: '',
     });
 
@@ -38,7 +36,6 @@ export function useProductForm() {
             size: '',
             stock: 0,
             min_stock: 5,
-            transaction_date: format(new Date(), 'yyyy-MM-dd'),
             note: '',
         });
     };
@@ -61,7 +58,6 @@ export function useProductForm() {
             size: product.size || '',
             stock: product.stock,
             min_stock: product.min_stock,
-            transaction_date: product.created_at ? product.created_at.split(' ')[0] : format(new Date(), 'yyyy-MM-dd'),
             note: 'Stok Awal',
         });
         setIsEditing(true);

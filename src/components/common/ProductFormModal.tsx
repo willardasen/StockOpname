@@ -237,7 +237,7 @@ export function ProductFormModal({
 
               {/* Size Input - only for shoe-size brands */}
               {isShoeSize && (
-                <div className="col-span-2 sm:col-span-1">
+                <div className="col-span-2">
                   <Label htmlFor="size">No. Sepatu / Size</Label>
                   <Input
                     id="size"
@@ -247,17 +247,6 @@ export function ProductFormModal({
                   />
                 </div>
               )}
-
-              <div className="col-span-2 sm:col-span-1">
-                <Label htmlFor="transaction_date">Tanggal Stok Masuk</Label>
-                <Input
-                  id="transaction_date"
-                  type="date"
-                  value={formData.transaction_date || ''}
-                  onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                  className="relative [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                />
-              </div>
 
               <div className="col-span-2">
                 <Label htmlFor="note">Catatan (Opsional)</Label>
