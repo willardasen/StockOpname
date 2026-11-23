@@ -18,9 +18,11 @@ export interface Product {
     name: string;
     brand: string | null;
     pcs_per_box?: number;
+    calculation_type?: 'BOX' | 'SIZE';
     brand_type: string | null;
     type_number: string | null;
     color: string | null;
+    size: string | null;
     stock: number;
     min_stock: number;
     is_active: number; // 1 = active, 0 = soft deleted
@@ -56,6 +58,7 @@ export interface CreateProductInput {
     brand_type?: string;
     type_number?: string;
     color?: string;
+    size?: string;
     stock?: number;
     min_stock?: number;
     transaction_date?: string;
@@ -90,6 +93,7 @@ export interface Brand {
     id: number;
     name: string;
     pcs_per_box: number;
+    calculation_type: 'BOX' | 'SIZE';
 }
 
 export interface BrandType {

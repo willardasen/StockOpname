@@ -22,6 +22,7 @@ export function StockOpname() {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [brandStock, setBrandStock] = useState(0);
   const [pcsPerBox, setPcsPerBox] = useState(10);
+  const [brandCalcType, setBrandCalcType] = useState<'BOX' | 'SIZE'>('BOX');
   
   // Global opname state
   const [globalPhysicalBox, setGlobalPhysicalBox] = useState('');
@@ -49,12 +50,14 @@ export function StockOpname() {
     if (!brandName) {
       setBrandStock(0);
       setPcsPerBox(10);
+      setBrandCalcType('BOX');
       return;
     }
     try {
-      const { totalStock, pcsPerBox: boxSize } = await ProductRepo.getStockByBrand(brandName);
+      const { totalStock, pcsPerBox: boxSize, calculationType } = await ProductRepo.getStockByBrand(brandName);
       setBrandStock(totalStock);
       setPcsPerBox(boxSize);
+      setBrandCalcType(calculationType);
     } catch (error) {
       console.error('Failed to load brand stock:', error);
     }
@@ -243,42 +246,40 @@ export function StockOpname() {
                     <option value="">-- Pilih Merek --</option>
                     {brands.map((brand) => (
                         <option key={brand.id} value={brand.name}>
-                            {brand.name} (1 Box = {brand.pcs_per_box} Pcs)
+                            {brand.name} {brand.calculation_type === 'SIZE' ? '(👟 Per No. Sepatu)' : `(1 Box = ${brand.pcs_per_box} Pcs)`}
                         </option>
                     ))}
                 </select>
             </div>
             
             {/* System Stock Display */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className={`grid grid-cols-1 ${brandCalcType === 'SIZE' ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-4 items-end`}>
                 <div className="space-y-2">
                     <Label className="text-muted-foreground">Total Stok Sistem ({selectedBrand || 'Semua'})</Label>
-                    <div className="text-2xl font-bold font-mono">
-                        {new Intl.NumberFormat('id-ID').format(Math.floor(brandStock / pcsPerBox))} Box
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                        + {brandStock % pcsPerBox} Pcs (Total: {new Intl.NumberFormat('id-ID').format(brandStock)} Pcs)
-                    </p>
-                    <p className="text-xs text-muted-foreground">1 Box = {pcsPerBox} Pcs</p>
+                    {brandCalcType === 'SIZE' ? (
+                      <>
+                        <div className="text-2xl font-bold font-mono">
+                            {new Intl.NumberFormat('id-ID').format(brandStock)} Pasang
+                        </div>
+                        <p className="text-xs text-muted-foreground">👟 Dihitung per No. Sepatu</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold font-mono">
+                            {new Intl.NumberFormat('id-ID').format(Math.floor(brandStock / pcsPerBox))} Box
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            + {brandStock % pcsPerBox} Pcs (Total: {new Intl.NumberFormat('id-ID').format(brandStock)} Pcs)
+                        </p>
+                        <p className="text-xs text-muted-foreground">1 Box = {pcsPerBox} Pcs</p>
+                      </>
+                    )}
                 </div>
                 
-                {/* Physical Input - Box */}
-                <div className="space-y-2">
-                    <Label htmlFor="physicalBox">Input Fisik (Box)</Label>
-                    <Input 
-                        id="physicalBox"
-                        type="number"
-                        min="0"
-                        placeholder="0"
-                        className="font-mono"
-                        value={globalPhysicalBox}
-                        onChange={(e) => setGlobalPhysicalBox(e.target.value)}
-                    />
-                </div>
-                
-                {/* Physical Input - Pcs */}
-                <div className="space-y-2">
-                    <Label htmlFor="physicalPcs">Input Fisik (Pcs)</Label>
+                {brandCalcType === 'SIZE' ? (
+                  /* SIZE brand: single Pasang input */
+                  <div className="space-y-2">
+                    <Label htmlFor="physicalPcs">Input Fisik (Pasang)</Label>
                     <Input 
                         id="physicalPcs"
                         type="number"
@@ -288,7 +289,39 @@ export function StockOpname() {
                         value={globalPhysicalPcs}
                         onChange={(e) => setGlobalPhysicalPcs(e.target.value)}
                     />
-                </div>
+                  </div>
+                ) : (
+                  /* BOX brand: Box + Pcs inputs */
+                  <>
+                    {/* Physical Input - Box */}
+                    <div className="space-y-2">
+                        <Label htmlFor="physicalBox">Input Fisik (Box)</Label>
+                        <Input 
+                            id="physicalBox"
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            className="font-mono"
+                            value={globalPhysicalBox}
+                            onChange={(e) => setGlobalPhysicalBox(e.target.value)}
+                        />
+                    </div>
+                    
+                    {/* Physical Input - Pcs */}
+                    <div className="space-y-2">
+                        <Label htmlFor="physicalPcs">Input Fisik (Pcs)</Label>
+                        <Input 
+                            id="physicalPcs"
+                            type="number"
+                            min="0"
+                            placeholder="0"
+                            className="font-mono"
+                            value={globalPhysicalPcs}
+                            onChange={(e) => setGlobalPhysicalPcs(e.target.value)}
+                        />
+                    </div>
+                  </>
+                )}
                 
                 {/* Difference Display */}
                 <div className="space-y-1 p-4 rounded-lg bg-white border dark:bg-black/20">
@@ -489,25 +522,10 @@ export function StockOpname() {
                 </div>
 
                 {/* Physical Count Input - Box & Pcs */}
-                <div className="grid grid-cols-2 gap-4">
+                {selectedProduct?.calculation_type === 'SIZE' ? (
+                  /* SIZE product: single Pasang input */
                   <div className="space-y-2">
-                    <Label htmlFor="productPhysicalBox">Input Fisik (Box)</Label>
-                    <Input
-                      id="productPhysicalBox"
-                      type="number"
-                      min="0"
-                      value={productPhysicalBox}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        setProductPhysicalBox(isNaN(val) ? 0 : val);
-                      }}
-                      placeholder="0"
-                      className="text-lg font-mono"
-                    />
-                    <p className="text-xs text-muted-foreground">1 Box = {productPcsPerBox} Pcs</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="productPhysicalPcs">Input Fisik (Pcs)</Label>
+                    <Label htmlFor="productPhysicalPcs">Input Fisik (Pasang)</Label>
                     <Input
                       id="productPhysicalPcs"
                       type="number"
@@ -520,9 +538,45 @@ export function StockOpname() {
                       placeholder="0"
                       className="text-lg font-mono"
                     />
-                    <p className="text-xs text-muted-foreground">Total: {physicalCount} Pcs</p>
+                    <p className="text-xs text-muted-foreground">Total: {physicalCount} Pasang</p>
                   </div>
-                </div>
+                ) : (
+                  /* BOX product: Box + Pcs inputs */
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="productPhysicalBox">Input Fisik (Box)</Label>
+                      <Input
+                        id="productPhysicalBox"
+                        type="number"
+                        min="0"
+                        value={productPhysicalBox}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setProductPhysicalBox(isNaN(val) ? 0 : val);
+                        }}
+                        placeholder="0"
+                        className="text-lg font-mono"
+                      />
+                      <p className="text-xs text-muted-foreground">1 Box = {productPcsPerBox} Pcs</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="productPhysicalPcs">Input Fisik (Pcs)</Label>
+                      <Input
+                        id="productPhysicalPcs"
+                        type="number"
+                        min="0"
+                        value={productPhysicalPcs}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setProductPhysicalPcs(isNaN(val) ? 0 : val);
+                        }}
+                        placeholder="0"
+                        className="text-lg font-mono"
+                      />
+                      <p className="text-xs text-muted-foreground">Total: {physicalCount} Pcs</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Difference Display - Only show after input */}
                 {difference !== null && (

@@ -29,6 +29,7 @@ export function BrandManager() {
 
   const [newBrand, setNewBrand] = useState('');
   const [newPcsPerBox, setNewPcsPerBox] = useState('10');
+  const [newCalcType, setNewCalcType] = useState<'BOX' | 'SIZE'>('BOX');
   
   // Linked Data Inputs
   const [newBrandType, setNewBrandType] = useState('');
@@ -67,11 +68,12 @@ export function BrandManager() {
   const handleAddBrand = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newBrand.trim()) {
-      const pcs = parseInt(newPcsPerBox) || 1;
-      const result = await addBrand(newBrand.trim(), pcs);
+      const pcs = newCalcType === 'SIZE' ? 1 : (parseInt(newPcsPerBox) || 1);
+      const result = await addBrand(newBrand.trim(), pcs, newCalcType);
       if (result.success) {
           setNewBrand('');
           setNewPcsPerBox('10');
+          setNewCalcType('BOX');
       } else {
           alert(result.message || "Gagal menambah Brand");
       }
@@ -182,8 +184,9 @@ export function BrandManager() {
               <CardTitle>Daftar Brand</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form onSubmit={handleAddBrand} className="flex gap-4 items-end">
-                <div className="grid w-full max-w-sm gap-1.5">
+              <form onSubmit={handleAddBrand} className="space-y-4">
+                <div className="flex gap-4 items-end flex-wrap">
+                  <div className="grid w-full max-w-sm gap-1.5">
                     <Label htmlFor="brand-name">Nama Brand</Label>
                     <Input 
                         id="brand-name"
@@ -191,28 +194,59 @@ export function BrandManager() {
                         value={newBrand}
                         onChange={(e) => setNewBrand(e.target.value)}
                     />
-                </div>
+                  </div>
 
-                <div className="grid gap-1.5">
-                    <Label htmlFor="pcs-input">Isi per Box</Label>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">1 Box =</span>
-                        <Input 
-                            id="pcs-input"
-                            placeholder="10" 
-                            type="number"
-                            value={newPcsPerBox}
-                            onChange={(e) => setNewPcsPerBox(e.target.value)}
-                            className="w-20"
+                  <div className="grid gap-1.5">
+                    <Label>Metode Hitung</Label>
+                    <div className="flex gap-3">
+                      <label className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer text-sm transition-colors ${newCalcType === 'BOX' ? 'border-indigo-500 bg-indigo-50 text-indigo-700' : 'border-input hover:bg-accent'}`}>
+                        <input 
+                          type="radio" 
+                          name="calcType" 
+                          value="BOX" 
+                          checked={newCalcType === 'BOX'} 
+                          onChange={() => setNewCalcType('BOX')}
+                          className="accent-indigo-600"
                         />
-                        <span className="text-sm text-muted-foreground">Pcs</span>
+                        📦 Kotak/Dus
+                      </label>
+                      <label className={`flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer text-sm transition-colors ${newCalcType === 'SIZE' ? 'border-green-500 bg-green-50 text-green-700' : 'border-input hover:bg-accent'}`}>
+                        <input 
+                          type="radio" 
+                          name="calcType" 
+                          value="SIZE" 
+                          checked={newCalcType === 'SIZE'} 
+                          onChange={() => setNewCalcType('SIZE')}
+                          className="accent-green-600"
+                        />
+                        👟 No. Sepatu
+                      </label>
                     </div>
-                </div>
+                  </div>
 
-                <Button type="submit" disabled={isLoading || !newBrand.trim()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Tambah
-                </Button>
+                  {newCalcType === 'BOX' && (
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="pcs-input">Isi per Box</Label>
+                      <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground whitespace-nowrap">1 Box =</span>
+                          <Input 
+                              id="pcs-input"
+                              placeholder="10" 
+                              type="number"
+                              value={newPcsPerBox}
+                              onChange={(e) => setNewPcsPerBox(e.target.value)}
+                              className="w-20"
+                          />
+                          <span className="text-sm text-muted-foreground">Pcs</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button type="submit" disabled={isLoading || !newBrand.trim()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tambah
+                  </Button>
+                </div>
               </form>
               
               <SearchInput
@@ -228,9 +262,15 @@ export function BrandManager() {
                     <div key={item.id} className="p-3 flex justify-between items-center hover:bg-gray-200">
                       <div>
                         <span className="font-medium">{item.name}</span>
-                        <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                          1 Box = {item.pcs_per_box} Pcs
-                        </span>
+                        {item.calculation_type === 'SIZE' ? (
+                          <span className="ml-2 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                            👟 Per No. Sepatu
+                          </span>
+                        ) : (
+                          <span className="ml-2 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                            📦 1 Box = {item.pcs_per_box} Pcs
+                          </span>
+                        )}
                       </div>
                       <Button 
                         variant="ghost" 

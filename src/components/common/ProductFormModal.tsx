@@ -61,9 +61,10 @@ export function ProductFormModal({
   }, [isOpen, loadAll]);
 
   // Derived state for filtering
-  const selectedBrandObj = brands.find(b => b.name === formData.brand);
+  const selectedBrandObj = brands.find(b => b.name.toLowerCase().trim() === (formData.brand || '').toLowerCase().trim());
   const selectedBrandId = selectedBrandObj?.id;
   const pcsPerBox = selectedBrandObj?.pcs_per_box || 1;
+  const isShoeSize = selectedBrandObj?.calculation_type === 'SIZE';
 
   const filteredBrandTypes = useMemo(() => {
     if (!selectedBrandId) return [];
@@ -80,21 +81,24 @@ export function ProductFormModal({
   // Auto-generate name when Brand, Type, Number, or Color changes
   useEffect(() => {
     // Construct name parts
-    const brand = brands.find(b => b.name === formData.brand)?.name || formData.brand || '';
+    const brand = brands.find(b => b.name.toLowerCase().trim() === (formData.brand || '').toLowerCase().trim())?.name || formData.brand || '';
     const type = brandTypes.find(t => t.name === formData.brand_type)?.name || formData.brand_type || '';
     const number = typeNumbers.find(n => n.name === formData.type_number)?.name || formData.type_number || '';
     const color = colors.find(c => c.name === formData.color)?.name || formData.color || '';
+    const size = formData.size || '';
 
     // If at least one part is present, form the name
-    if (brand || type || number || color) {
-      const newName = [brand, type, number, color].filter(Boolean).join(' ');
+    if (brand || type || number || color || size) {
+      const nameParts = [brand, type, number, color];
+      if (size) nameParts.push(`Size ${size}`);
+      const newName = nameParts.filter(Boolean).join(' ');
       
       // Update if different to avoid infinite loops
       if (newName !== formData.name) {
         setFormData({ ...formData, name: newName });
       }
     }
-  }, [formData.brand, formData.brand_type, formData.type_number, formData.color, formData.name, brands, brandTypes, typeNumbers, colors, setFormData, formData]);
+  }, [formData.brand, formData.brand_type, formData.type_number, formData.color, formData.size, formData.name, brands, brandTypes, typeNumbers, colors, setFormData, formData]);
 
   const handleBrandChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newBrand = e.target.value;
@@ -103,7 +107,8 @@ export function ProductFormModal({
           ...formData, 
           brand: newBrand,
           brand_type: '', // Reset
-          type_number: '' // Reset
+          type_number: '', // Reset
+          size: '' // Reset
       });
   };
   const handleSubmit = (e: React.FormEvent) => {
@@ -230,6 +235,19 @@ export function ProductFormModal({
                 </select>
               </div>
 
+              {/* Size Input - only for shoe-size brands */}
+              {isShoeSize && (
+                <div className="col-span-2 sm:col-span-1">
+                  <Label htmlFor="size">No. Sepatu / Size</Label>
+                  <Input
+                    id="size"
+                    placeholder="Contoh: 39, 40, 41"
+                    value={formData.size || ''}
+                    onChange={(e) => setFormData({ ...formData, size: e.target.value })}
+                  />
+                </div>
+              )}
+
               <div className="col-span-2 sm:col-span-1">
                 <Label htmlFor="transaction_date">Tanggal Stok Masuk</Label>
                 <Input
@@ -272,8 +290,29 @@ export function ProductFormModal({
                   type="hidden"
                   value={formData.stock}
                 />
-                <div className="flex gap-2">
-                    <div className="flex-1">
+                {isShoeSize ? (
+                  /* SIZE brand: single Pasang input */
+                  <div>
+                    <Input
+                      id="stock_pasang"
+                      type="text"
+                      inputMode="numeric"
+                      value={formatNumber(formData.stock)}
+                      onChange={(e) => {
+                        if (isEditing) return;
+                        setFormData({ ...formData, stock: parseNumber(e.target.value) });
+                      }}
+                      className={`placeholder:text-muted-foreground ${isEditing ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                      placeholder="0"
+                      readOnly={isEditing}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Satuan: Pasang</p>
+                  </div>
+                ) : (
+                  /* BOX brand: Box + Pcs inputs */
+                  <>
+                    <div className="flex gap-2">
+                      <div className="flex-1">
                         <Label htmlFor="stock_box" className="text-xs text-muted-foreground">Box</Label>
                         <div className="relative">
                             <Input
@@ -297,8 +336,8 @@ export function ProductFormModal({
                                 </div>
                             )}
                         </div>
-                    </div>
-                    <div className="flex-1">
+                      </div>
+                      <div className="flex-1">
                         <Label htmlFor="stock_pcs" className="text-xs text-muted-foreground">Pcs (Sisa)</Label>
                         <Input
                             id="stock_pcs"
@@ -315,12 +354,14 @@ export function ProductFormModal({
                             placeholder="0"
                             readOnly={isEditing}
                         />
+                      </div>
                     </div>
-                </div>
-                {pcsPerBox > 1 && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Total: {formatNumber(formData.stock)} Pcs
-                    </p>
+                    {pcsPerBox > 1 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                          Total: {formatNumber(formData.stock)} Pcs
+                      </p>
+                    )}
+                  </>
                 )}
                 {isEditing && (
                     <p className="text-xs text-amber-600 mt-1">

@@ -70,6 +70,7 @@ export const StockTransactionForm = memo(({
   const isStockIn = type === 'IN';
   const themeColor = isStockIn ? 'text-green-600' : 'text-orange-600';
   const buttonColor = isStockIn ? 'bg-green-600 hover:bg-green-700' : 'bg-orange-600 hover:bg-orange-700';
+  const isSizeProduct = selectedProduct?.calculation_type === 'SIZE';
 
   return (
     <Card>
@@ -97,11 +98,11 @@ export const StockTransactionForm = memo(({
 
           {/* Product Search */}
           <div className="space-y-2 flex-1 min-w-[300px]">
-            <Label htmlFor="search">Kode / Nama Produk</Label>
+            <Label htmlFor="search">Cari Produk (Nama / Merek / Kode)</Label>
             <div className="flex gap-2">
               <Input
                 id="search"
-                placeholder="Ketik nama atau kode barang..."
+                placeholder="Ketik nama produk, merek, atau kode barang..."
                 value={searchKeyword}
                 onChange={(e) => {
                   setSearchKeyword(e.target.value);
@@ -128,7 +129,7 @@ export const StockTransactionForm = memo(({
               >
                 <div className="font-medium">{product.name}</div>
                 <div className="text-sm text-gray-500">
-                  {product.brand} {product.brand_type} {product.type_number} - {product.color} | Stok: {product.stock}
+                  <span className="font-semibold text-gray-700">Merek: {product.brand || '-'}</span> | {product.brand_type || ''} {product.type_number || ''} {product.color ? `- ${product.color}` : ''} {product.size ? `(Size ${product.size})` : ''} | Stok: {product.stock}
                 </div>
               </div>
             ))}
@@ -142,31 +143,43 @@ export const StockTransactionForm = memo(({
 
         {/* Product Details */}
         {selectedProduct && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-gray-200 rounded-lg border">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 p-4 bg-gray-200 rounded-lg border">
             <div className="space-y-2">
               <Label>Nama Produk</Label>
-              <Input value={selectedProduct.name} readOnly className="bg-white" />
+              <Input value={selectedProduct.name} readOnly className="bg-white font-medium" />
             </div>
             <div className="space-y-2">
-              <Label>Jenis Barang</Label>
+              <Label>Brand / Merek</Label>
               <Input
-                value={`${selectedProduct.brand || ''} ${selectedProduct.brand_type || ''} ${selectedProduct.type_number || ''}`.trim()}
+                value={selectedProduct.brand || '-'}
+                readOnly
+                className="bg-white font-medium text-indigo-700"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipe & No. Tipe</Label>
+              <Input
+                value={`${selectedProduct.brand_type || ''} ${selectedProduct.type_number || ''}`.trim() || '-'}
                 readOnly
                 className="bg-white"
               />
             </div>
             <div className="space-y-2">
-              <Label>Warna</Label>
-              <Input value={selectedProduct.color || '-'} readOnly className="bg-white" />
+              <Label>Warna / Size</Label>
+              <Input 
+                value={`${selectedProduct.color || '-'}${selectedProduct.size ? ` (Size ${selectedProduct.size})` : ''}`} 
+                readOnly 
+                className="bg-white" 
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Stok Saat Ini</Label>
               <div className="bg-white px-3 py-2 rounded-md border font-medium">
                 <span className={`${isStockIn ? 'text-green-600' : 'text-orange-600'} font-bold`}>
-                  {formatNumber(selectedProduct.stock)} Pcs
+                  {formatNumber(selectedProduct.stock)} {selectedProduct.calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}
                 </span>
-                {(selectedProduct.pcs_per_box || 1) > 1 && (
+                {selectedProduct.calculation_type !== 'SIZE' && (selectedProduct.pcs_per_box || 1) > 1 && (
                   <span className="text-gray-500 text-xs ml-2">
                     ({Math.floor(selectedProduct.stock / (selectedProduct.pcs_per_box || 1))} Box {selectedProduct.stock % (selectedProduct.pcs_per_box || 1)} Pcs)
                   </span>
@@ -181,28 +194,10 @@ export const StockTransactionForm = memo(({
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>Jumlah {isStockIn ? 'Masuk' : 'Keluar'}</Label>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <Label htmlFor="boxQty" className="text-xs font-medium text-gray-500">Box</Label>
-                  <div className="relative">
-                    <Input
-                      id="boxQty"
-                      type="text"
-                      inputMode="numeric"
-                      placeholder="0"
-                      value={formatNumber(boxQty)}
-                      onChange={(e) => setBoxQty(parseNumber(e.target.value))}
-                      className="placeholder:text-muted-foreground"
-                    />
-                    {(selectedProduct.pcs_per_box || 1) > 1 && (
-                      <div className="absolute right-3 top-2.5 text-xs text-muted-foreground bg-white px-1">
-                        x{selectedProduct.pcs_per_box}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <Label htmlFor="pcsQty" className="text-xs font-medium text-gray-500">Pcs</Label>
+              {isSizeProduct ? (
+                /* SIZE product: single Pasang input */
+                <div>
+                  <Label htmlFor="pcsQty" className="text-xs font-medium text-gray-500">Pasang</Label>
                   <Input
                     id="pcsQty"
                     type="text"
@@ -213,11 +208,48 @@ export const StockTransactionForm = memo(({
                     className="placeholder:text-muted-foreground"
                   />
                 </div>
-              </div>
-              {(selectedProduct.pcs_per_box || 1) > 1 && (
-                <p className={`text-xs ${themeColor} font-medium`}>
-                  Total: {formatNumber((boxQty * (selectedProduct.pcs_per_box || 1)) + pcsQty)} Pcs
-                </p>
+              ) : (
+                /* BOX product: Box + Pcs inputs */
+                <>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Label htmlFor="boxQty" className="text-xs font-medium text-gray-500">Box</Label>
+                      <div className="relative">
+                        <Input
+                          id="boxQty"
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="0"
+                          value={formatNumber(boxQty)}
+                          onChange={(e) => setBoxQty(parseNumber(e.target.value))}
+                          className="placeholder:text-muted-foreground"
+                        />
+                        {(selectedProduct.pcs_per_box || 1) > 1 && (
+                          <div className="absolute right-3 top-2.5 text-xs text-muted-foreground bg-white px-1">
+                            x{selectedProduct.pcs_per_box}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <Label htmlFor="pcsQty" className="text-xs font-medium text-gray-500">Pcs</Label>
+                      <Input
+                        id="pcsQty"
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="0"
+                        value={formatNumber(pcsQty)}
+                        onChange={(e) => setPcsQty(parseNumber(e.target.value))}
+                        className="placeholder:text-muted-foreground"
+                      />
+                    </div>
+                  </div>
+                  {(selectedProduct.pcs_per_box || 1) > 1 && (
+                    <p className={`text-xs ${themeColor} font-medium`}>
+                      Total: {formatNumber((boxQty * (selectedProduct.pcs_per_box || 1)) + pcsQty)} Pcs
+                    </p>
+                  )}
+                </>
               )}
             </div>
             <div className="space-y-2 md:col-span-2">

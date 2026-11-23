@@ -22,14 +22,14 @@ export function ProductFilterBar({ onFilterChange, className }: ProductFilterBar
   const [color, setColor] = useState('');
 
   useEffect(() => {
-    if (brands.length === 0) loadAll();
+    loadAll();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Get selected brand's id for mapping
   const selectedBrandId = useMemo(() => {
     if (!brand) return null;
-    const found = brands.find(b => b.name === brand);
+    const found = brands.find(b => b.name.toLowerCase().trim() === brand.toLowerCase().trim());
     return found?.id ?? null;
   }, [brand, brands]);
 

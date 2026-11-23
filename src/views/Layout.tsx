@@ -131,7 +131,14 @@ export function Layout() {
             <div className="p-1.5 bg-primary rounded-lg">
                 <Package className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg tracking-tight">Stock Opname</span>
+            <div>
+              <span className="font-bold text-lg tracking-tight">Stock Opname</span>
+              {import.meta.env.DEV && (
+                <span className="block text-[10px] font-semibold text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30 w-fit">
+                  🟡 DEV / TESTING
+                </span>
+              )}
+            </div>
           </div>
           <Button 
             variant="ghost" 

@@ -74,10 +74,11 @@ export function ProductList() {
       render: (_: unknown, row: Product) => {
         const stock = row.stock;
         const pcsPerBox = row.pcs_per_box || 1;
+        const isSizeType = row.calculation_type === 'SIZE';
         
         return (
           <div>
-            {new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(stock / pcsPerBox)}
+            {isSizeType ? '-' : new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(stock / pcsPerBox)}
           </div>
         );
       }

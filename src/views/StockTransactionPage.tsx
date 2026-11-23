@@ -130,7 +130,8 @@ export function StockTransactionPage({ type }: StockTransactionPageProps) {
                 setDate(transaction.created_at.split(' ')[0] || format(new Date(), 'yyyy-MM-dd'));
                 
                 const pcsPerBox = product.pcs_per_box || 1;
-                if (pcsPerBox > 1) {
+                const isSizeProduct = product.calculation_type === 'SIZE';
+                if (!isSizeProduct && pcsPerBox > 1) {
                     setBoxQty(Math.floor(transaction.qty / pcsPerBox));
                     setPcsQty(transaction.qty % pcsPerBox);
                 } else {

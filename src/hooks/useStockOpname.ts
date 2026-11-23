@@ -12,8 +12,9 @@ export function useStockOpname() {
     const [note, setNote] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Get pcs_per_box from selected product (fallback to 10)
+    // Get pcs_per_box from selected product (fallback to 10, or 1 for SIZE brands)
     const pcsPerBox = useMemo(() => {
+        if (selectedProduct?.calculation_type === 'SIZE') return 1;
         return selectedProduct?.pcs_per_box || 10;
     }, [selectedProduct]);
 

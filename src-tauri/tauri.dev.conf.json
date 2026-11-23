@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "com.stockopname.dev",
+  "productName": "stock-opname-dev",
+  "app": {
+    "windows": [
+      {
+        "title": "Stock Opname [DEV / TESTING]"
+      }
+    ]
+  }
+}

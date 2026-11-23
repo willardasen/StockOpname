@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS products (
     brand_type TEXT,
     type_number TEXT,
     color TEXT,
+    size TEXT,
     stock INTEGER DEFAULT 0,
     min_stock INTEGER DEFAULT 5,
     is_active INTEGER DEFAULT 1,
@@ -53,7 +54,8 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE TABLE IF NOT EXISTS brands (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
-    pcs_per_box INTEGER DEFAULT 10
+    pcs_per_box INTEGER DEFAULT 10,
+    calculation_type TEXT DEFAULT 'BOX'
 );
 
 -- 5. Master Data: Brand Types
@@ -101,8 +103,12 @@ const DEFAULT_PASSWORD = 'admin123';
 export const getDb = async (): Promise<Database> => {
     if (dbInstance) return dbInstance;
 
+    // Use separate database for development to avoid mixing with production data
+    const dbName = import.meta.env.DEV ? "sqlite:stock_dev.db" : "sqlite:stock.db";
+    console.log(`[DB] Loading: ${dbName} (mode: ${import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'})`);
+
     // Load database from app data directory
-    dbInstance = await Database.load("sqlite:stock.db");
+    dbInstance = await Database.load(dbName);
     return dbInstance;
 };
 
@@ -223,6 +229,26 @@ export const initializeDatabase = async (): Promise<void> => {
         const msg = String(e).toLowerCase();
         if (!msg.includes("duplicate column") && !msg.includes("exists")) {
             console.error("Migration global_opname failed:", e);
+        }
+    }
+
+    // 5. Migrate brands (add calculation_type)
+    try {
+        await db.execute("ALTER TABLE brands ADD COLUMN calculation_type TEXT DEFAULT 'BOX'");
+    } catch (e: unknown) {
+        const msg = String(e).toLowerCase();
+        if (!msg.includes("duplicate column") && !msg.includes("exists")) {
+            console.error("Migration brands calculation_type failed:", e);
+        }
+    }
+
+    // 6. Migrate products (add size)
+    try {
+        await db.execute("ALTER TABLE products ADD COLUMN size TEXT");
+    } catch (e: unknown) {
+        const msg = String(e).toLowerCase();
+        if (!msg.includes("duplicate column") && !msg.includes("exists")) {
+            console.error("Migration products size failed:", e);
         }
     }
 

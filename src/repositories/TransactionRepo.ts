@@ -19,10 +19,10 @@ export const TransactionRepo = {
         const db = await getDb();
 
         let query = `
-            SELECT t.*, p.name as product_name, p.brand, p.brand_type, p.type_number, p.color, b.pcs_per_box, u.username 
+            SELECT t.*, p.name as product_name, p.brand, p.brand_type, p.type_number, p.color, b.pcs_per_box, b.calculation_type, u.username 
             FROM transactions t
             LEFT JOIN products p ON t.product_id = p.id
-            LEFT JOIN brands b ON p.brand = b.name
+            LEFT JOIN brands b ON LOWER(TRIM(p.brand)) = LOWER(TRIM(b.name))
             LEFT JOIN users u ON t.user_id = u.id
             WHERE 1=1
         `;
@@ -304,10 +304,10 @@ export const TransactionRepo = {
         const db = await getDb();
 
         let query = `
-            SELECT t.*, p.name as product_name, p.brand, p.brand_type, p.type_number, p.color, b.pcs_per_box, u.username 
+            SELECT t.*, p.name as product_name, p.brand, p.brand_type, p.type_number, p.color, b.pcs_per_box, b.calculation_type, u.username 
             FROM transactions t
             LEFT JOIN products p ON t.product_id = p.id
-            LEFT JOIN brands b ON p.brand = b.name
+            LEFT JOIN brands b ON LOWER(TRIM(p.brand)) = LOWER(TRIM(b.name))
             LEFT JOIN users u ON t.user_id = u.id
             WHERE DATE(t.created_at) BETWEEN ? AND ?
         `;

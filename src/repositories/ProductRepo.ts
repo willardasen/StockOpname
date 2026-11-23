@@ -12,9 +12,9 @@ export const ProductRepo = {
         const db = await getDb();
 
         const query = `
-            SELECT p.*, b.pcs_per_box 
+            SELECT p.*, b.pcs_per_box, b.calculation_type 
             FROM products p 
-            LEFT JOIN brands b ON p.brand = b.name 
+            LEFT JOIN brands b ON LOWER(TRIM(p.brand)) = LOWER(TRIM(b.name)) 
             WHERE p.is_active = 1 
             ORDER BY p.name ASC
             LIMIT ?
@@ -29,12 +29,13 @@ export const ProductRepo = {
      */
     async searchProducts(keyword: string): Promise<Product[]> {
         const db = await getDb();
-        const searchTerm = `%${keyword}%`;
+        const trimmed = keyword.trim();
+        const searchTerm = `%${trimmed}%`;
 
         return db.select<Product[]>(
-            `SELECT p.*, b.pcs_per_box 
+            `SELECT p.*, b.pcs_per_box, b.calculation_type 
              FROM products p 
-             LEFT JOIN brands b ON p.brand = b.name
+             LEFT JOIN brands b ON LOWER(TRIM(p.brand)) = LOWER(TRIM(b.name))
              WHERE p.is_active = 1 
              AND (p.name LIKE ? OR p.brand LIKE ? OR p.type_number LIKE ? OR p.color LIKE ?)
              ORDER BY p.name ASC
@@ -50,9 +51,9 @@ export const ProductRepo = {
         const db = await getDb();
 
         const products = await db.select<Product[]>(
-            `SELECT p.*, b.pcs_per_box 
+            `SELECT p.*, b.pcs_per_box, b.calculation_type 
              FROM products p 
-             LEFT JOIN brands b ON p.brand = b.name
+             LEFT JOIN brands b ON LOWER(TRIM(p.brand)) = LOWER(TRIM(b.name))
              WHERE p.id = ?`,
             [id]
         );
@@ -67,14 +68,15 @@ export const ProductRepo = {
         const db = await getDb();
 
         const result = await db.execute(
-            `INSERT INTO products (name, brand, brand_type, type_number, color, stock, min_stock)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO products (name, brand, brand_type, type_number, color, size, stock, min_stock)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 input.name,
                 input.brand || null,
                 input.brand_type || null,
                 input.type_number || null,
                 input.color || null,
+                input.size || null,
                 input.stock || 0,
                 input.min_stock || 5
             ]
@@ -117,6 +119,10 @@ export const ProductRepo = {
         if (input.color !== undefined) {
             updates.push("color = ?");
             values.push(input.color || null);
+        }
+        if (input.size !== undefined) {
+            updates.push("size = ?");
+            values.push(input.size || null);
         }
         if (input.stock !== undefined) {
             updates.push("stock = ?");
@@ -197,9 +203,9 @@ export const ProductRepo = {
         const db = await getDb();
 
         return db.select<Product[]>(
-            `SELECT p.*, b.pcs_per_box 
+            `SELECT p.*, b.pcs_per_box, b.calculation_type 
              FROM products p 
-             LEFT JOIN brands b ON p.brand = b.name
+             LEFT JOIN brands b ON LOWER(TRIM(p.brand)) = LOWER(TRIM(b.name))
              WHERE p.is_active = 1 AND p.stock <= p.min_stock 
              ORDER BY (p.min_stock - p.stock) DESC`
         );
@@ -246,24 +252,25 @@ export const ProductRepo = {
     /**
      * Get total stock and pcs_per_box for a specific brand
      */
-    async getStockByBrand(brandName: string): Promise<{ totalStock: number; pcsPerBox: number }> {
+    async getStockByBrand(brandName: string): Promise<{ totalStock: number; pcsPerBox: number; calculationType: 'BOX' | 'SIZE' }> {
         const db = await getDb();
 
         // Get pcs_per_box from brands table
-        const brandResult = await db.select<{ pcs_per_box: number }[]>(
-            "SELECT pcs_per_box FROM brands WHERE name = ?",
+        const brandResult = await db.select<{ pcs_per_box: number; calculation_type: string }[]>(
+            "SELECT pcs_per_box, calculation_type FROM brands WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))",
             [brandName]
         );
         const pcsPerBox = brandResult.length > 0 ? (brandResult[0].pcs_per_box || 10) : 10;
+        const calculationType = (brandResult.length > 0 ? brandResult[0].calculation_type : 'BOX') as 'BOX' | 'SIZE';
 
         // Get total stock for products of this brand
         const stockResult = await db.select<{ total: number }[]>(
-            "SELECT COALESCE(SUM(stock), 0) as total FROM products WHERE is_active = 1 AND brand = ?",
+            "SELECT COALESCE(SUM(stock), 0) as total FROM products WHERE is_active = 1 AND LOWER(TRIM(brand)) = LOWER(TRIM(?))",
             [brandName]
         );
         const totalStock = stockResult[0].total;
 
-        return { totalStock, pcsPerBox };
+        return { totalStock, pcsPerBox, calculationType };
     },
 
     /**

@@ -2,7 +2,8 @@ import Database from "@tauri-apps/plugin-sql";
 
 export async function checkSchema() {
     try {
-        const db = await Database.load("sqlite:stock.db");
+        const dbName = import.meta.env.DEV ? "sqlite:stock_dev.db" : "sqlite:stock.db";
+        const db = await Database.load(dbName);
 
         console.log("Checking brand_types schema:");
         const btInfo = await db.select("PRAGMA table_info(brand_types)");
