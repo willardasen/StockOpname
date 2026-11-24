@@ -141,8 +141,8 @@ export const ProductRepo = {
             );
         }
 
-        // Update the initial "Stok Awal" transaction if note is provided
-        if (input.note !== undefined) {
+        // Update the initial "Stok Awal" transaction if date or note is provided
+        if (input.transaction_date !== undefined || input.note !== undefined) {
             // Find the Stok Awal transaction (usually the first IN transaction)
             const stokAwalTx = await db.select<{ id: number; created_at: string; note: string }[]>(
                 "SELECT id, created_at, note FROM transactions WHERE product_id = ? AND type = 'IN' ORDER BY id ASC LIMIT 1",
@@ -151,10 +151,30 @@ export const ProductRepo = {
 
             if (stokAwalTx.length > 0) {
                 const txId = stokAwalTx[0].id;
-                await db.execute(
-                    "UPDATE transactions SET note = ? WHERE id = ?",
-                    [input.note, txId]
-                );
+                const txUpdates: string[] = [];
+                const txValues: (string | number)[] = [];
+
+                if (input.transaction_date !== undefined) {
+                    txUpdates.push("created_at = ?");
+                    const timeStr = stokAwalTx[0].created_at.split(' ')[1] || '00:00:00';
+                    const datetimeStr = input.transaction_date.includes(':') ? input.transaction_date : `${input.transaction_date} ${timeStr}`;
+                    // Update product's created_at to match
+                    await db.execute("UPDATE products SET created_at = ? WHERE id = ?", [datetimeStr, input.id]);
+                    txValues.push(datetimeStr);
+                }
+                
+                if (input.note !== undefined) {
+                    txUpdates.push("note = ?");
+                    txValues.push(input.note);
+                }
+
+                if (txUpdates.length > 0) {
+                    txValues.push(txId);
+                    await db.execute(
+                        `UPDATE transactions SET ${txUpdates.join(", ")} WHERE id = ?`,
+                        txValues
+                    );
+                }
             }
         }
 
