@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { trackStockWrite } from "./stockWrites";
 import type { Product, CreateProductInput, UpdateProductInput } from "@/types/database";
 
 
@@ -238,7 +239,7 @@ export const ProductRepo = {
     /**
      * Update stock directly (used by TransactionRepo)
      */
-    async updateStock(id: number, newStock: number): Promise<boolean> {
+    updateStock: trackStockWrite(async (id: number, newStock: number): Promise<boolean> => {
         const db = await getDb();
 
         const result = await db.execute(
@@ -247,7 +248,7 @@ export const ProductRepo = {
         );
 
         return result.rowsAffected > 0;
-    },
+    }),
 
     /**
      * Get total stock and pcs_per_box for a specific brand
@@ -278,7 +279,7 @@ export const ProductRepo = {
      * for products that have stock > 0 but no corresponding IN transaction.
      * Returns the number of products repaired.
      */
-    async repairOrphanedStock(userId: number): Promise<number> {
+    repairOrphanedStock: trackStockWrite(async (userId: number): Promise<number> => {
         const db = await getDb();
 
         const orphanedProducts = await db.select<{ id: number; name: string; stock: number; created_at: string }[]>(
@@ -304,5 +305,5 @@ export const ProductRepo = {
         }
 
         return orphanedProducts.length;
-    }
+    }),
 };

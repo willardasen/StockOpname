@@ -1,4 +1,5 @@
 import { getDb } from "./db";
+import { trackStockWrite } from "./stockWrites";
 import type {
     TransactionWithProduct,
     TransactionType,
@@ -79,7 +80,7 @@ export const TransactionRepo = {
      * Create a new transaction
      * Also updates product stock automatically
      */
-    async createTransaction(input: CreateTransactionInput): Promise<boolean> {
+    createTransaction: trackStockWrite(async (input: CreateTransactionInput): Promise<boolean> => {
         const db = await getDb();
 
         // 1. Get current stock
@@ -118,7 +119,7 @@ export const TransactionRepo = {
         // 4. Create transaction record
         let query = `INSERT INTO transactions (product_id, user_id, type, qty, current_stock_snapshot, note`;
         let valuesStr = `VALUES (?, ?, ?, ?, ?, ?`;
-        let params: (string | number | null)[] = [
+        const params: (string | number | null)[] = [
             input.product_id,
             validUserId,
             input.type,
@@ -141,13 +142,13 @@ export const TransactionRepo = {
         await db.execute(`${query} ${valuesStr}`, params);
 
         return true;
-    },
+    }),
 
     /**
      * Update an existing transaction
      * Also recalculates and updates product stock automatically
      */
-    async updateTransaction(input: UpdateTransactionInput): Promise<boolean> {
+    updateTransaction: trackStockWrite(async (input: UpdateTransactionInput): Promise<boolean> => {
         const db = await getDb();
 
         // 1. Get the original transaction
@@ -238,13 +239,13 @@ export const TransactionRepo = {
         }
 
         return true;
-    },
+    }),
 
     /**
      * Adjust stock (Stock Opname)
      * Automatically calculates difference and creates transaction
      */
-    async adjustStock(input: StockAdjustmentInput): Promise<boolean> {
+    adjustStock: trackStockWrite(async (input: StockAdjustmentInput): Promise<boolean> => {
         const db = await getDb();
 
         // 1. Get current stock
@@ -295,7 +296,7 @@ export const TransactionRepo = {
         );
 
         return true;
-    },
+    }),
 
     /**
      * Get transactions by date range
@@ -327,7 +328,7 @@ export const TransactionRepo = {
     /**
      * Delete a transaction and revert stock changes
      */
-    async deleteTransaction(id: number): Promise<boolean> {
+    deleteTransaction: trackStockWrite(async (id: number): Promise<boolean> => {
         const db = await getDb();
 
         // 1. Get the transaction to be deleted
@@ -385,7 +386,7 @@ export const TransactionRepo = {
         await db.execute("DELETE FROM transactions WHERE id = ?", [id]);
 
         return true;
-    },
+    }),
 
     /**
      * Get daily IN/OUT totals for a specific date

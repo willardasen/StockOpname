@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ProductRepo, TransactionRepo } from '@/repositories';
+import { trackStockWrite } from '@/repositories/stockWrites';
 import type { Product, CreateProductInput, UpdateProductInput } from '@/types/database';
 import { useAuthStore } from './authStore';
 
@@ -108,7 +109,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
         }
     },
 
-    createProduct: async (input: CreateProductInput) => {
+    createProduct: trackStockWrite(async (input: CreateProductInput) => {
         set({ isLoading: true, error: null });
 
         try {
@@ -162,9 +163,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
             });
             return null;
         }
-    },
+    }),
 
-    updateProduct: async (input: UpdateProductInput) => {
+    updateProduct: trackStockWrite(async (input: UpdateProductInput) => {
         set({ isLoading: true, error: null });
 
         try {
@@ -184,9 +185,9 @@ export const useProductStore = create<ProductState>((set, get) => ({
             });
             return null;
         }
-    },
+    }),
 
-    deleteProduct: async (id: number) => {
+    deleteProduct: trackStockWrite(async (id: number) => {
         set({ isLoading: true, error: null });
 
         try {
@@ -206,7 +207,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
             });
             return false;
         }
-    },
+    }),
 
     setSelectedProduct: (product: Product | null) => {
         set({ selectedProduct: product });

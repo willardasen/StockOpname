@@ -1,6 +1,8 @@
 mod commands;
+mod stock_reset;
 
 use commands::{backup_database, get_db_path, hash_password, import_database, verify_password};
+use stock_reset::reset_stock;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,7 +16,8 @@ pub fn run() {
             verify_password,
             backup_database,
             import_database,
-            get_db_path
+            get_db_path,
+            reset_stock
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores';
 import { Button } from '@/components/ui/button';
+import { ResetStockAction } from '@/components/common/ResetStockAction';
+import { trackStockWrite } from '@/repositories/stockWrites';
 import { invoke } from '@tauri-apps/api/core';
 import { save, open, ask, message } from '@tauri-apps/plugin-dialog';
 import { 
@@ -15,8 +17,7 @@ import {
   X,
   PackagePlus,
   PackageMinus,
-  TrendingUp,
-  Trash2
+  TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -50,7 +51,7 @@ export function Layout() {
     }
   };
 
-  const handleImport = async () => {
+  const handleImport = trackStockWrite(async () => {
     try {
       const filePath = await open({
         filters: [{
@@ -87,27 +88,7 @@ export function Layout() {
     } catch (error) {
       await message(`Import gagal: ${error}`, { title: 'Error', kind: 'error' });
     }
-  };
-
-  const handleReset = async () => {
-    const confirmDelete = await ask(
-      'PERINGATAN: Tindakan ini akan MENGHAPUS SEMUA DATA transaksi, produk, dan stok opname.\n\n' +
-      'Data user admin tidak akan dihapus.\n\n' +
-      'Apakah Anda yakin ingin melanjutkan?',
-      { title: 'Konfirmasi Reset Data', kind: 'warning' }
-    );
-
-    if (confirmDelete) {
-      try {
-        const { resetDatabase } = await import('@/repositories');
-        await resetDatabase();
-        await message('Database berhasil di-reset!', { title: 'Sukses', kind: 'info' });
-        window.location.reload();
-      } catch (error) {
-        await message(`Reset database gagal: ${error}`, { title: 'Error', kind: 'error' });
-      }
-    }
-  };
+  });
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -201,14 +182,7 @@ export function Layout() {
               Import Database
             </Button>
 
-            <Button 
-                variant="ghost" 
-                className="w-full justify-start text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/10"
-                onClick={handleReset}
-            >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Reset Data
-            </Button>
+            <ResetStockAction userId={user?.id} />
             
             <Button 
                 variant="ghost" 

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClipboardCheck, Search, Save, Check, Calculator, RotateCcw, Filter, Upload } from 'lucide-react';
 import { GlobalOpnameRepo, TransactionRepo, ProductRepo, type GlobalOpnameRecord } from '@/repositories';
+import { trackStockWrite } from '@/repositories/stockWrites';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { exportToExcel } from '@/utils/excel';
 import { format } from 'date-fns';
@@ -121,7 +122,7 @@ export function StockOpname() {
   };
   
   // Save today's verification
-  const handleSaveGlobalOpname = async () => {
+  const handleSaveGlobalOpname = trackStockWrite(async () => {
     if (!selectedBrand) {
       setSaveSuccess('Pilih merek terlebih dahulu!');
       setTimeout(() => setSaveSuccess(''), 3000);
@@ -155,7 +156,7 @@ export function StockOpname() {
     } finally {
       setSavingGlobal(false);
     }
-  };
+  });
   
   const {
     selectedProduct,
