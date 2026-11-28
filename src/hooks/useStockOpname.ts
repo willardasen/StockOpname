@@ -1,3 +1,4 @@
+import { totalQuantity } from '@/lib/quantity';
 import { useState, useMemo } from 'react';
 import { useAuthStore, useTransactionStore } from '@/stores';
 import type { Product } from '@/types/database';
@@ -20,8 +21,8 @@ export function useStockOpname() {
 
     // Calculate total physical count
     const physicalCount = useMemo(() => {
-        return (physicalBox * pcsPerBox) + physicalPcs;
-    }, [physicalBox, physicalPcs, pcsPerBox]);
+        return totalQuantity(selectedProduct?.calculation_type ?? 'BOX', pcsPerBox, physicalBox, physicalPcs);
+    }, [physicalBox, physicalPcs, pcsPerBox, selectedProduct]);
 
     const selectProduct = (product: Product) => {
         setSelectedProduct(product);
@@ -36,7 +37,7 @@ export function useStockOpname() {
 
         if (!selectedProduct || !user) return;
 
-        if (physicalCount < 0) {
+        if (!Number.isSafeInteger(physicalCount) || physicalCount < 0) {
             return;
         }
 
@@ -44,6 +45,7 @@ export function useStockOpname() {
             product_id: selectedProduct.id,
             user_id: user.id,
             physical_count: physicalCount,
+            expected_stock: selectedProduct.stock,
             note: note || undefined,
         });
 
@@ -67,7 +69,6 @@ export function useStockOpname() {
 
     const calculateDifference = () => {
         if (!selectedProduct) return null;
-        if (physicalBox === 0 && physicalPcs === 0) return null;
         return physicalCount - selectedProduct.stock;
     };
 

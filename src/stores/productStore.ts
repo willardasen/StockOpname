@@ -1,13 +1,14 @@
 import { create } from 'zustand';
-import { ProductRepo, TransactionRepo } from '@/repositories';
+import { ProductRepo } from '@/repositories';
 import { trackStockWrite } from '@/repositories/stockWrites';
 import type { Product, CreateProductInput, UpdateProductInput } from '@/types/database';
-import { useAuthStore } from './authStore';
 
 interface ProductState {
+    revision: number;
     products: Product[];
     selectedProduct: Product | null;
     lowStockProducts: Product[];
+    lowStockCount: number;
     totalCount: number;
     totalStock: number;
     isLoading: boolean;
@@ -27,9 +28,11 @@ interface ProductState {
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
+    revision: 0,
     products: [],
     selectedProduct: null,
     lowStockProducts: [],
+    lowStockCount: 0,
     totalCount: 0,
     totalStock: 0,
     isLoading: false,
@@ -48,19 +51,6 @@ export const useProductStore = create<ProductState>((set, get) => ({
             }
             const products = await ProductRepo.getAllProducts();
             const totalCount = await ProductRepo.getProductCount();
-
-            // Auto-repair: create missing "Stok Awal" transactions for orphaned stock
-            let user = useAuthStore.getState().user;
-            if (!user) {
-                const savedUser = localStorage.getItem('user');
-                if (savedUser) user = JSON.parse(savedUser);
-            }
-            if (user) {
-                const repaired = await ProductRepo.repairOrphanedStock(user.id);
-                if (repaired > 0) {
-                    console.log(`Auto-repaired ${repaired} products with missing stock transactions`);
-                }
-            }
 
             set({ products, totalCount, isLoading: false });
         } catch (error) {
@@ -92,7 +82,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     loadLowStockProducts: async () => {
         try {
-            const lowStockProducts = await ProductRepo.getLowStockProducts();
+            const lowStockProducts = await ProductRepo.getLowStockProducts(5);
             set({ lowStockProducts });
         } catch (error) {
             console.error('Failed to load low stock products:', error);
@@ -101,9 +91,8 @@ export const useProductStore = create<ProductState>((set, get) => ({
 
     loadStats: async () => {
         try {
-            const totalCount = await ProductRepo.getProductCount();
-            const totalStock = await ProductRepo.getTotalStock();
-            set({ totalCount, totalStock });
+            const stats = await ProductRepo.getStats();
+            set({ totalCount: stats.count, totalStock: stats.total, lowStockCount: stats.low_count });
         } catch (error) {
             console.error('Failed to load stats:', error);
         }
@@ -113,49 +102,18 @@ export const useProductStore = create<ProductState>((set, get) => ({
         set({ isLoading: true, error: null });
 
         try {
-            const initialStock = input.stock || 0;
-            const transactionDate = input.transaction_date;
-            
-            const productInput = { ...input, stock: 0 };
-            const product = await ProductRepo.createProduct(productInput);
-
-            if (initialStock > 0) {
-                let user = useAuthStore.getState().user;
-                if (!user) {
-                    // fallback parse from localstorage
-                    const savedUser = localStorage.getItem('user');
-                    if (savedUser) user = JSON.parse(savedUser);
-                }
-
-                if (user) {
-                    try {
-                        await TransactionRepo.createTransaction({
-                            product_id: product.id,
-                            user_id: user.id,
-                            type: 'IN',
-                            qty: initialStock,
-                            note: input.note?.trim() || 'Stok Awal',
-                            created_at: transactionDate
-                        });
-                        product.stock = initialStock;
-                    } catch (txError) {
-                        console.error("Failed to create initial stock transaction:", txError);
-                        alert(`Gagal membuat transaksi stok awal. \nProductID: ${product?.id}, UserID: ${user?.id}\nError: ${txError instanceof Error ? txError.message : String(txError)}`);
-                    }
-                } else {
-                    alert("Gagal membuat stok awal: User tidak ditemukan.");
-                }
-            }
+            const product = await ProductRepo.createProduct(input);
 
             const { products } = get();
             set({
+                revision: get().revision + 1,
                 products: [...products, product],
                 isLoading: false
             });
             return product;
         } catch (error) {
             console.error("Failed to create product:", error);
-            const errMsg = error instanceof Error ? error.message : 'Gagal menambah produk';
+            const errMsg = error instanceof Error ? error.message : String(error);
             alert(`Gagal: ${errMsg}`);
             set({
                 error: errMsg,
@@ -175,7 +133,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
                 const updatedProducts = products.map(p =>
                     p.id === input.id ? updatedProduct : p
                 );
-                set({ products: updatedProducts, isLoading: false });
+                set({ products: updatedProducts, isLoading: false, revision: get().revision + 1 });
             }
             return updatedProduct;
         } catch (error) {
@@ -195,6 +153,7 @@ export const useProductStore = create<ProductState>((set, get) => ({
             if (success) {
                 const { products } = get();
                 set({
+                    revision: get().revision + 1,
                     products: products.filter(p => p.id !== id),
                     isLoading: false
                 });

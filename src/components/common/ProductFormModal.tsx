@@ -1,3 +1,4 @@
+import { formatQuantity as formatNumber, parseQuantity as parseNumber } from '@/lib/quantity';
 import { useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Edit, Trash2, X, Plus } from 'lucide-react';
 import type { CreateProductInput } from '@/types/database';
-import { useBrandStore, useProductStore } from '@/stores';
+import { useBrandStore } from '@/stores';
 
 interface ProductFormModalProps {
   isOpen: boolean;
@@ -17,22 +18,6 @@ interface ProductFormModalProps {
   onDelete: () => void;
   isLoading: boolean;
 }
-
-// Helper: Format number with thousands separator (dots)
-const formatNumber = (num: number | string | undefined): string => {
-  if (num === undefined || num === null || num === '') return '';
-  // Convert to string, remove non-digits first to be safe, then format
-  const cleanNum = num.toString().replace(/\D/g, ''); 
-  return new Intl.NumberFormat('id-ID').format(Number(cleanNum));
-};
-
-// Helper: Parse string with dots back to number
-const parseNumber = (val: string): number => {
-  if (!val) return 0;
-  // Remove all non-digits
-  const cleanVal = val.replace(/\D/g, '');
-  return Number(cleanVal);
-};
 
 export function ProductFormModal({
   isOpen,
@@ -52,7 +37,7 @@ export function ProductFormModal({
     loadAll 
   } = useBrandStore();
 
-  const { products } = useProductStore();
+
 
   useEffect(() => {
     if (isOpen) {
@@ -121,15 +106,9 @@ export function ProductFormModal({
       // Validate numeric fields (allow 0 but check for null/undefined)
       if (formData.stock === undefined || formData.stock === null) { alert("Stok harus diisi!"); return; }
 
-      // Duplicate name check
-      const duplicateProduct = products.find(
-        p => p.name.toLowerCase() === formData.name.toLowerCase()
-      );
-      if (duplicateProduct && !isEditing) {
-        alert(`Produk dengan nama "${formData.name}" sudah ada!`);
-        return;
+      if (![formData.stock, formData.min_stock].every(n => Number.isSafeInteger(n) && Number(n) >= 0)) {
+        alert('Masukkan jumlah bulat yang valid.'); return;
       }
-
       onSubmit(e);
   };
 

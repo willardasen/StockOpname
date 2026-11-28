@@ -7,15 +7,7 @@
   ],
   "permissions": [
     "core:default",
-    "opener:default",
-    "sql:default",
-    "sql:allow-execute",
-    "sql:allow-select",
-    "sql:allow-load",
-    "sql:allow-close",
-    "fs:default",
-    "fs:read-all",
-    "fs:write-all",
-    "dialog:default"
+    "dialog:allow-message",
+    "dialog:allow-ask"
   ]
 }

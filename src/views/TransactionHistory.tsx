@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { useTransactionStore } from '@/stores';
+import { usePagedQuery } from '@/hooks/usePagedQuery';
+import { PageControls } from '@/components/common/PageControls';
+import { useState } from 'react';
+import { TransactionRepo } from '@/repositories';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,61 +9,38 @@ import { Label } from '@/components/ui/label';
 import { VirtualTable, ProductFilterBar } from '@/components/common';
 import type { ProductFilter } from '@/components/common';
 import { History, Filter, Search, Upload } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { exportToExcel } from '@/utils/excel';
 import type { TransactionType, TransactionWithProduct } from '@/types/database';
 
 export function TransactionHistory() {
-  const { transactions, loadTransactions, isLoading, getTransactionsByDateRange } = useTransactionStore();
-  
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [filterType, setFilterType] = useState<TransactionType | ''>('');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [productFilter, setProductFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
 
-  // Filter transactions by search keyword (client-side)
-  const filteredTransactions = transactions.filter(tx => {
-    if (!searchKeyword.trim()) return true;
-    const keyword = searchKeyword.toLowerCase();
-    return (
-      tx.product_name?.toLowerCase().includes(keyword) ||
-      tx.username?.toLowerCase().includes(keyword) ||
-      tx.note?.toLowerCase().includes(keyword) ||
-      tx.type?.toLowerCase().includes(keyword)
-    );
-  }).filter(tx => {
-    if (productFilter.brand && tx.brand !== productFilter.brand) return false;
-    if (productFilter.brandType && tx.brand_type !== productFilter.brandType) return false;
-    if (productFilter.typeNumber && tx.type_number !== productFilter.typeNumber) return false;
-    if (productFilter.color && tx.color !== productFilter.color) return false;
-    return true;
-  });
+  const [range, setRange] = useState({ start: '', end: '', kind: '' });
+  const handleFilter = () => setRange({ start: startDate, end: endDate, kind: filterType });
+  const filter = { ...range, keyword: searchKeyword, brand: productFilter.brand, brand_type: productFilter.brandType, type_number: productFilter.typeNumber, color: productFilter.color };
+  const page = usePagedQuery<TransactionWithProduct>('history', filter);
+  const filteredTransactions = page.rows;
+  const isLoading = page.loading;
+  const handleExport = async () => {
+    try {
+      const dataToExport = (await TransactionRepo.list(filter)).map(tx => ({
+        'Tanggal': format(parseISO(tx.created_at), 'dd/MM/yyyy HH:mm'),
+        'Produk': tx.product_name,
+        'Tipe': tx.type,
+        'Jumlah': tx.signed_delta ?? tx.qty,
+        'Satuan': tx.calculation_type === 'SIZE' ? 'Pasang' : 'Pcs',
+        'Stok Setelah': tx.current_stock_snapshot,
+        'User': tx.username,
+        'Catatan': tx.note || '-',
+      }));
 
-  useEffect(() => {
-    loadTransactions();
-  }, [loadTransactions]);
-
-  const handleFilter = async () => {
-    if (startDate && endDate) {
-      await getTransactionsByDateRange(startDate, endDate);
-    } else {
-      await loadTransactions(undefined, undefined, filterType || undefined);
-    }
-  };
-
-  const handleExport = () => {
-    const dataToExport = transactions.map(tx => ({
-      'Tanggal': format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm'),
-      'Produk': tx.product_name,
-      'Tipe': tx.type,
-      'Jumlah': tx.qty,
-      'Stok Setelah': tx.current_stock_snapshot,
-      'User': tx.username,
-      'Catatan': tx.note || '-',
-    }));
-    
-    exportToExcel(dataToExport, `transaksi_${format(new Date(), 'yyyyMMdd')}`);
+      await exportToExcel(dataToExport, `transaksi_${format(new Date(), 'yyyyMMdd')}`);
+    } catch (error) { alert(String(error)); }
   };
 
   const getTypeBadgeClass = (type: TransactionType) => {
@@ -85,7 +64,7 @@ export function TransactionHistory() {
             Riwayat Transaksi
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {filteredTransactions.length} transaksi ditemukan
+            {page.total} transaksi ditemukan
           </p>
         </div>
         <Button onClick={handleExport} variant="outline">
@@ -156,13 +135,14 @@ export function TransactionHistory() {
         </CardContent>
       </Card>
 
+      <PageControls {...page} />
       {/* Transaction List */}
       <Card>
         <CardContent className="p-0">
           <VirtualTable
             data={filteredTransactions}
             columns={[
-              { key: 'created_at', header: 'Tanggal', width: 140, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy HH:mm') },
+              { key: 'created_at', header: 'Tanggal', width: 140, render: (_, row) => format(parseISO((row as TransactionWithProduct).created_at), 'dd/MM/yyyy HH:mm') },
               { key: 'product_name', header: 'Nama Produk', width: 200 },
               { key: 'type', header: 'Tipe', width: 100, render: (v, row) => (
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getTypeBadgeClass((row as TransactionWithProduct).type)}`}>
@@ -171,9 +151,11 @@ export function TransactionHistory() {
               )},
               { key: 'qty', header: 'Jumlah', width: 100, render: (_, row) => {
                 const tx = row as TransactionWithProduct;
+                const amount = tx.signed_delta ?? tx.qty;
+                const decrease = tx.type === 'OUT' || amount < 0;
                 return (
-                  <span className={`font-bold ${tx.qty >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {tx.qty >= 0 ? '+' : ''}{tx.qty}
+                  <span className={decrease ? 'text-red-600' : 'text-foreground'}>
+                    {amount} {tx.calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}
                   </span>
                 );
               }},

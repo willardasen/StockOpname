@@ -1,5 +1,9 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useAuthStore, useProductStore, useBrandStore } from '@/stores';
+import { totalQuantity } from '@/lib/quantity';
+import { usePagedQuery } from '@/hooks/usePagedQuery';
+import { PageControls } from '@/components/common/PageControls';
+import type { Product } from '@/types/database';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useBrandStore } from '@/stores';
 import { useStockOpname } from '@/hooks';
 import { SearchInput, VirtualTable, VirtualList, ProductFilterBar } from '@/components/common';
 import type { ProductFilter } from '@/components/common';
@@ -8,15 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ClipboardCheck, Search, Save, Check, Calculator, RotateCcw, Filter, Upload } from 'lucide-react';
-import { GlobalOpnameRepo, TransactionRepo, ProductRepo, type GlobalOpnameRecord } from '@/repositories';
+import { GlobalOpnameRepo, ProductRepo, type GlobalOpnameRecord } from '@/repositories';
 import { trackStockWrite } from '@/repositories/stockWrites';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { exportToExcel } from '@/utils/excel';
 import { format } from 'date-fns';
 
 export function StockOpname() {
-  const { user } = useAuthStore();
-  const { products, searchProducts, loadProducts } = useProductStore();
+
+  const [keyword, setKeyword] = useState('');
   const { brands, loadAll: loadBrands } = useBrandStore();
   
   // Brand selection state
@@ -37,17 +41,19 @@ export function StockOpname() {
   
   // Calculate total physical and difference using dynamic pcsPerBox
   const globalPhysicalTotal = useMemo(() => {
-    const box = parseInt(globalPhysicalBox) || 0;
-    const pcs = parseInt(globalPhysicalPcs) || 0;
-    return (box * pcsPerBox) + pcs;
-  }, [globalPhysicalBox, globalPhysicalPcs, pcsPerBox]);
+    return totalQuantity(brandCalcType, pcsPerBox, Number(globalPhysicalBox), Number(globalPhysicalPcs));
+  }, [globalPhysicalBox, globalPhysicalPcs, pcsPerBox, brandCalcType]);
   const globalDifference = useMemo(() => 
     globalPhysicalTotal - brandStock, 
     [globalPhysicalTotal, brandStock]
   );
   
   // Load brand stock when brand is selected
+  const brandRequest = useRef(0);
+  const [loadedBrand, setLoadedBrand] = useState('');
   const loadBrandStock = useCallback(async (brandName: string) => {
+    const request = ++brandRequest.current;
+    setLoadedBrand('');
     if (!brandName) {
       setBrandStock(0);
       setPcsPerBox(10);
@@ -56,6 +62,8 @@ export function StockOpname() {
     }
     try {
       const { totalStock, pcsPerBox: boxSize, calculationType } = await ProductRepo.getStockByBrand(brandName);
+      if (request !== brandRequest.current) return;
+      setLoadedBrand(brandName);
       setBrandStock(totalStock);
       setPcsPerBox(boxSize);
       setBrandCalcType(calculationType);
@@ -67,7 +75,6 @@ export function StockOpname() {
   useEffect(() => {
     loadBrands();
     loadHistory();
-    loadProducts(); // Load all products on mount for Per Produk tab
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
@@ -132,18 +139,11 @@ export function StockOpname() {
     setSavingGlobal(true);
     setSaveSuccess('');
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const { total_in, total_out } = await TransactionRepo.getDailyTotals(today);
       
       await GlobalOpnameRepo.saveRecord({
-        date: today,
         brand: selectedBrand,
         system_stock: brandStock,
         physical_stock: globalPhysicalTotal,
-        difference: globalDifference,
-        total_in,
-        total_out,
-        user_id: user?.id
       });
       
       setSaveSuccess(`Verifikasi ${selectedBrand} berhasil disimpan!`);
@@ -152,7 +152,8 @@ export function StockOpname() {
       // Clear success message after 3 seconds
       setTimeout(() => setSaveSuccess(''), 3000);
     } catch (error) {
-      console.error('Failed to save global opname:', error);
+      setSaveSuccess(String(error));
+      await loadBrandStock(selectedBrand);
     } finally {
       setSavingGlobal(false);
     }
@@ -176,22 +177,10 @@ export function StockOpname() {
     difference
   } = useStockOpname();
 
-  const handleSearch = (keyword: string) => {
-    if (keyword.trim()) {
-      searchProducts(keyword);
-    }
-  };
-
-  const filteredOpnameProducts = useMemo(() => {
-    return products.filter(p => {
-      if (opnameProductFilter.brand && p.brand !== opnameProductFilter.brand) return false;
-      if (opnameProductFilter.brandType && p.brand_type !== opnameProductFilter.brandType) return false;
-      if (opnameProductFilter.typeNumber && p.type_number !== opnameProductFilter.typeNumber) return false;
-      if (opnameProductFilter.color && p.color !== opnameProductFilter.color) return false;
-      return true;
-    });
-  }, [products, opnameProductFilter]);
-
+  const page = usePagedQuery<Product>('products', { keyword, brand: opnameProductFilter.brand, brand_type: opnameProductFilter.brandType, type_number: opnameProductFilter.typeNumber, color: opnameProductFilter.color }, 50);
+  const filteredOpnameProducts = page.rows;
+  const refreshPage = page.refresh;
+  useEffect(() => { if (successMessage) { refreshPage(); void loadBrandStock(selectedBrand); } }, [successMessage, refreshPage, loadBrandStock, selectedBrand]);
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -346,7 +335,7 @@ export function StockOpname() {
             <div className="flex justify-end gap-2">
                 <Button 
                     onClick={handleSaveGlobalOpname}
-                    disabled={savingGlobal}
+                    disabled={savingGlobal || !loadedBrand || loadedBrand !== selectedBrand || !Number.isSafeInteger(globalPhysicalTotal) || (!globalPhysicalPcs && !globalPhysicalBox)}
                     className="gap-2"
                 >
                     <Save className="h-4 w-4" />
@@ -442,7 +431,7 @@ export function StockOpname() {
           </CardHeader>
           <CardContent className="space-y-4">
             <SearchInput 
-              onSearch={handleSearch}
+              onSearch={setKeyword}
               placeholder="Ketik nama produk untuk mencari..."
             />
 
@@ -450,7 +439,8 @@ export function StockOpname() {
             
             {/* Search Results */}
             <div className="space-y-2">
-              <VirtualList
+              <PageControls {...page} />
+            <VirtualList
                 data={filteredOpnameProducts}
                 height="400px"
                 itemHeight={80} // Approx product card height
@@ -533,7 +523,7 @@ export function StockOpname() {
                       min="0"
                       value={productPhysicalPcs}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value);
+                        const val = Number(e.target.value);
                         setProductPhysicalPcs(isNaN(val) ? 0 : val);
                       }}
                       placeholder="0"
@@ -552,7 +542,7 @@ export function StockOpname() {
                         min="0"
                         value={productPhysicalBox}
                         onChange={(e) => {
-                          const val = parseInt(e.target.value);
+                          const val = Number(e.target.value);
                           setProductPhysicalBox(isNaN(val) ? 0 : val);
                         }}
                         placeholder="0"
@@ -568,7 +558,7 @@ export function StockOpname() {
                         min="0"
                         value={productPhysicalPcs}
                         onChange={(e) => {
-                          const val = parseInt(e.target.value);
+                          const val = Number(e.target.value);
                           setProductPhysicalPcs(isNaN(val) ? 0 : val);
                         }}
                         placeholder="0"

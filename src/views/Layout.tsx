@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ResetStockAction } from '@/components/common/ResetStockAction';
 import { trackStockWrite } from '@/repositories/stockWrites';
 import { invoke } from '@tauri-apps/api/core';
-import { save, open, ask, message } from '@tauri-apps/plugin-dialog';
+import { ask, message } from '@tauri-apps/plugin-dialog';
 import { 
   Package, 
   LayoutDashboard, 
@@ -27,23 +27,15 @@ export function Layout() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
+    window.location.reload();
   };
 
   const handleBackup = async () => {
     try {
-      const filePath = await save({
-        filters: [{
-          name: 'SQLite Database',
-          extensions: ['db', 'sqlite']
-        }],
-        defaultPath: 'stock_backup.db'
-      });
-      
-      if (filePath) {
-        await invoke('backup_database', { destPath: filePath });
+      if (await invoke<boolean>('backup_database')) {
         await message('Backup berhasil disimpan!', { title: 'Sukses', kind: 'info' });
       }
     } catch (error) {
@@ -53,35 +45,10 @@ export function Layout() {
 
   const handleImport = trackStockWrite(async () => {
     try {
-      const filePath = await open({
-        filters: [{
-          name: 'SQLite Database',
-          extensions: ['db', 'sqlite']
-        }],
-        multiple: false
-      });
-      
-      if (filePath) {
-        // Use Tauri's ask dialog for confirmation
-        const confirmImport = await ask(
-          'PERINGATAN: Import database akan mengganti semua data yang ada.\n\n' +
-          'Pastikan Anda sudah backup data sebelumnya.\n\n' +
-          'Lanjutkan import?',
-          { title: 'Konfirmasi Import', kind: 'warning' }
-        );
-        
-        if (confirmImport) {
-          // Close existing database connection before import
-          const { closeDb, initializeDatabase } = await import('@/repositories');
-          await closeDb();
-          
-          // Perform import
-          await invoke('import_database', { sourcePath: filePath });
-          
-          // Reinitialize database connection with new data
-          await initializeDatabase();
-          
-          await message('Import berhasil! Aplikasi akan di-refresh.', { title: 'Sukses', kind: 'info' });
+      if (await ask('Impor mengganti data aktif. Salinan pemulihan akan disimpan terlebih dahulu. Lanjutkan?', { title: 'Konfirmasi Import', kind: 'warning' })) {
+        const recovery = await invoke<string | null>('import_database');
+        if (recovery) {
+          await message('Impor berhasil. Cadangan sebelum impor tersimpan di ' + recovery, { title: 'Pemulihan data' });
           window.location.reload();
         }
       }

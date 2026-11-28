@@ -42,6 +42,8 @@ export interface Transaction {
 
 // Transaction with joined product name for display
 export interface TransactionWithProduct extends Transaction {
+    calculation_type?: 'BOX' | 'SIZE';
+    signed_delta?: number | null;
     product_name: string;
     username: string;
     brand?: string | null;
@@ -86,6 +88,7 @@ export interface StockAdjustmentInput {
     product_id: number;
     user_id: number;
     physical_count: number;
+    expected_stock?: number;
     note?: string;
 }
 

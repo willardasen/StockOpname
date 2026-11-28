@@ -13,8 +13,9 @@ export const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const login = useAuthStore((state: { login: any }) => state.login);
+  const { login, setup } = useAuthStore();
+  const [rotate, setRotate] = useState(false);
+  const [replacement, setReplacement] = useState('');
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -23,15 +24,15 @@ export const Login = () => {
     setIsLoading(true);
 
     try {
-      const success = await login({ username: username.trim(), password });
+      const success = await login({ username: username.trim(), password }, rotate ? replacement : undefined);
       if (success) {
         navigate('/');
       } else {
         setError('Username atau password salah');
       }
     } catch (err) {
-      setError('Terjadi kesalahan saat login');
-      console.error(err);
+      if (String(err) === 'PASSWORD_CHANGE_REQUIRED') { setRotate(true); setError('Ganti kata sandi bawaan untuk melanjutkan.'); }
+      else setError(String(err));
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +48,7 @@ export const Login = () => {
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight">Stock Opname</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Silakan masuk untuk melanjutkan
+              {setup ? 'Buat akun pertama untuk database ini' : 'Silakan masuk untuk melanjutkan'}
             </CardDescription>
           </div>
         </CardHeader>
@@ -89,6 +90,7 @@ export const Login = () => {
                 </div>
             </div>
 
+            {rotate && <div><Label htmlFor="new-password">Kata sandi baru</Label><Input id="new-password" type="password" autoComplete="new-password" required minLength={8} value={replacement} onChange={e => setReplacement(e.target.value)} /></div>}
             {error && (
               <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2 text-sm text-destructive animate-in fade-in slide-in-from-top-1">
                 <span>⚠️</span>
@@ -107,16 +109,12 @@ export const Login = () => {
                   <span>Memproses...</span>
                 </div>
               ) : (
-                'Masuk'
+                setup ? 'Buat akun' : 'Masuk'
               )}
             </Button>
           </form>
 
-            <div className="mt-8 flex justify-center">
-                <div className="px-4 py-2 bg-muted/50 rounded-full border border-border text-xs text-muted-foreground font-mono">
-                    Default: admin / admin123
-                </div>
-            </div>
+
         </CardContent>
       </Card>
       

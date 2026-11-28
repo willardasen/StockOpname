@@ -19,6 +19,7 @@ interface SalesData {
   brand_type: string;
   type_number: string;
   color: string;
+  calculation_type: 'SIZE' | 'BOX';
   total_qty_out: number;
   total_qty_in: number;
   transaction_count: number;
@@ -26,48 +27,42 @@ interface SalesData {
 
 export function SalesReport() {
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
-  const [salesData, setSalesData] = useState<SalesData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [report, setReport] = useState({ month: '', rows: [] as SalesData[], error: '' });
+  const isLoading = report.month !== selectedMonth;
   const [salesFilter, setSalesFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
 
   const filteredSalesData = useMemo(() => {
-    return salesData.filter(item => {
+    if (report.month !== selectedMonth) return [];
+    return report.rows.filter(item => {
       if (salesFilter.brand && item.brand !== salesFilter.brand) return false;
       if (salesFilter.brandType && item.brand_type !== salesFilter.brandType) return false;
       if (salesFilter.typeNumber && item.type_number !== salesFilter.typeNumber) return false;
       if (salesFilter.color && item.color !== salesFilter.color) return false;
       return true;
     });
-  }, [salesData, salesFilter]);
-
-  // Load sales data for the selected month
-  const loadSalesData = async (yearMonth: string) => {
-    setIsLoading(true);
-    try {
-      const data = await TransactionRepo.getMonthlySalesReport(yearMonth);
-      setSalesData(data);
-    } catch (error) {
-      console.error('Failed to load sales data:', error);
-      setSalesData([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [report, selectedMonth, salesFilter]);
 
   useEffect(() => {
-    loadSalesData(selectedMonth);
+    let current = true;
+    TransactionRepo.getMonthlySalesReport(selectedMonth).then(rows => {
+      if (current) setReport({ month: selectedMonth, rows, error: '' });
+    }).catch(error => {
+      if (current) setReport({ month: selectedMonth, rows: [], error: String(error) });
+    });
+    return () => { current = false; };
   }, [selectedMonth]);
 
   // Calculate summary stats
   const summaryStats = useMemo(() => {
-    if (salesData.length === 0) return { totalSold: 0, totalTransactions: 0, topProduct: null };
-    
-    const totalSold = salesData.reduce((sum, item) => sum + item.total_qty_out, 0);
-    const totalTransactions = salesData.reduce((sum, item) => sum + item.transaction_count, 0);
+    const totalSold = (['BOX', 'SIZE'] as const).map(unit => {
+      const n = filteredSalesData.filter(row => row.calculation_type === unit).reduce((sum, row) => sum + row.total_qty_out, 0);
+      return formatNumber(n) + (unit === 'SIZE' ? ' Pasang' : ' Pcs');
+    }).join(' / ');
+    const totalTransactions = filteredSalesData.reduce((sum, item) => sum + item.transaction_count, 0);
     const topProduct = filteredSalesData[0]; // Already sorted by total_qty_out DESC
     
     return { totalSold, totalTransactions, topProduct };
-  }, [salesData, filteredSalesData]);
+  }, [filteredSalesData]);
 
   // Get month display name
   const monthDisplayName = useMemo(() => {
@@ -118,7 +113,7 @@ export function SalesReport() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-100 text-sm">Total Terjual</p>
-                <p className="text-3xl font-bold mt-1">{formatNumber(summaryStats.totalSold)} Pcs</p>
+                <p className="text-3xl font-bold mt-1">{summaryStats.totalSold}</p>
                 <p className="text-purple-200 text-xs mt-1">{monthDisplayName}</p>
               </div>
               <Package className="h-12 w-12 text-purple-200" />
@@ -132,7 +127,7 @@ export function SalesReport() {
               <div>
                 <p className="text-blue-100 text-sm">Jumlah Transaksi</p>
                 <p className="text-3xl font-bold mt-1">{formatNumber(summaryStats.totalTransactions)}</p>
-                <p className="text-blue-200 text-xs mt-1">{salesData.length} produk berbeda</p>
+                <p className="text-blue-200 text-xs mt-1">{new Set(filteredSalesData.map(row => row.product_id)).size} produk berbeda</p>
               </div>
               <TrendingUp className="h-12 w-12 text-blue-200" />
             </div>
@@ -148,7 +143,7 @@ export function SalesReport() {
                   {summaryStats.topProduct?.product_name || '-'}
                 </p>
                 <p className="text-amber-200 text-xs mt-1">
-                  {summaryStats.topProduct ? `${formatNumber(summaryStats.topProduct.total_qty_out)} Pcs` : '-'}
+                  {summaryStats.topProduct ? `${formatNumber(summaryStats.topProduct.total_qty_out)} ${summaryStats.topProduct.calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}` : '-'}
                 </p>
               </div>
               <Trophy className="h-12 w-12 text-amber-200" />
@@ -167,7 +162,9 @@ export function SalesReport() {
         </CardHeader>
         <CardContent className="p-0">
           <ProductFilterBar onFilterChange={setSalesFilter} className="px-4 pt-2 py-2" />
-          {isLoading ? (
+          {!isLoading && report.error ? (
+            <p role="alert" className="p-4 text-red-600">{report.error}</p>
+          ) : isLoading ? (
             <div className="px-4 py-8 text-center text-muted-foreground">
               Memuat data...
             </div>
@@ -194,13 +191,13 @@ export function SalesReport() {
                 { key: 'brand_type', header: 'Tipe', width: 80, render: (v) => String(v || '-') },
                 { key: 'type_number', header: 'No Tipe', width: 80, render: (v) => String(v || '-') },
                 { key: 'color', header: 'Warna', width: 80, render: (v) => String(v || '-') },
-                { key: 'total_qty_in', header: 'Stok Masuk', width: 100, align: 'right' as const, render: (v) => (
+                { key: 'total_qty_in', header: 'Stok Masuk', width: 100, align: 'right' as const, render: (v, row) => (
                   <span className="font-bold text-green-600">
-                    {Number(v) > 0 ? `+${formatNumber(Number(v))}` : '-'}
+                    {Number(v) > 0 ? `+${formatNumber(Number(v))} ${(row as SalesData).calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}` : '-'}
                   </span>
                 )},
-                { key: 'total_qty_out', header: 'Stok Keluar', width: 100, align: 'right' as const, render: (v) => (
-                  <span className="font-bold text-purple-600">{formatNumber(Number(v))} Pcs</span>
+                { key: 'total_qty_out', header: 'Stok Keluar', width: 100, align: 'right' as const, render: (v, row) => (
+                  <span className="font-bold text-purple-600">{formatNumber(Number(v))} {(row as SalesData).calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}</span>
                 )},
                 { key: 'transaction_count', header: 'Transaksi', width: 90, align: 'right' as const, render: (v) => (
                   <span className="text-muted-foreground">{formatNumber(Number(v))}x</span>

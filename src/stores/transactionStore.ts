@@ -25,7 +25,7 @@ interface TransactionState {
     clearError: () => void;
 }
 
-export const useTransactionStore = create<TransactionState>((set, get) => ({
+export const useTransactionStore = create<TransactionState>((set) => ({
     transactions: [],
     recentTransactions: [],
     totalCount: 0,
@@ -60,12 +60,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
         set({ isLoading: true, error: null });
 
         try {
-            await TransactionRepo.createTransaction(input);
-            // Reload transactions
-            const { loadTransactions } = get();
-            await loadTransactions();
+            const success = await TransactionRepo.createTransaction(input);
             set({ isLoading: false });
-            return true;
+            return success;
         } catch (error) {
             set({
                 error: error instanceof Error ? error.message : 'Gagal membuat transaksi',
@@ -80,11 +77,7 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
         try {
             const success = await TransactionRepo.updateTransaction(input);
-            if (success) {
-                // Reload transactions
-                const { loadTransactions } = get();
-                await loadTransactions();
-            } else {
+            if (!success) {
                 set({ error: 'Transaksi tidak ditemukan atau gagal diupdate' });
             }
             set({ isLoading: false });
@@ -102,9 +95,9 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
         set({ isLoading: true, error: null });
 
         try {
-            await TransactionRepo.adjustStock(input);
+            const success = await TransactionRepo.adjustStock(input);
             set({ isLoading: false });
-            return true;
+            return success;
         } catch (error) {
             set({
                 error: error instanceof Error ? error.message : 'Gagal menyesuaikan stok',

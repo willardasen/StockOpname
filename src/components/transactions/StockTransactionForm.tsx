@@ -1,3 +1,4 @@
+import { formatQuantity as formatNumber, parseQuantity as parseNumber, totalQuantity } from '@/lib/quantity';
 import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,20 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Search, RotateCcw, Save } from 'lucide-react';
 import { Product } from '@/types/database';
-
-// Helper: Format number with thousands separator (dots)
-const formatNumber = (num: number | string | undefined): string => {
-  if (num === undefined || num === null || num === '') return '';
-  const cleanNum = num.toString().replace(/\D/g, '');
-  return new Intl.NumberFormat('id-ID').format(Number(cleanNum));
-};
-
-// Helper: Parse string with dots back to number
-const parseNumber = (val: string): number => {
-  if (!val) return 0;
-  const cleanVal = val.replace(/\D/g, '');
-  return Number(cleanVal);
-};
 
 interface TransactionFormProps {
   type: 'IN' | 'OUT';
@@ -246,7 +233,7 @@ export const StockTransactionForm = memo(({
                   </div>
                   {(selectedProduct.pcs_per_box || 1) > 1 && (
                     <p className={`text-xs ${themeColor} font-medium`}>
-                      Total: {formatNumber((boxQty * (selectedProduct.pcs_per_box || 1)) + pcsQty)} Pcs
+                      Total: {formatNumber(totalQuantity('BOX', selectedProduct.pcs_per_box || 10, boxQty, pcsQty))} Pcs
                     </p>
                   )}
                 </>

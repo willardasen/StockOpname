@@ -1,4 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { usePagedQuery } from '@/hooks/usePagedQuery';
+import { PageControls } from '@/components/common/PageControls';
+import { useState } from 'react';
 import { useProductStore } from '@/stores';
 import { useProductForm } from '@/hooks';
 import { VirtualTable, SearchInput, ProductFormModal, ProductFilterBar } from '@/components/common';
@@ -9,13 +11,9 @@ import { Plus, Package, Pencil, Trash2 } from 'lucide-react';
 import type { Product } from '@/types/database';
 
 export function ProductList() {
-  const { 
-    products, 
-    isLoading,
-    searchProducts, 
-    loadProducts
-  } = useProductStore();
-
+  const isLoading = useProductStore(s => s.isLoading);
+  const revision = useProductStore(s => s.revision);
+  const [keyword, setKeyword] = useState('');
   const {
     showModal,
     setShowModal,
@@ -46,19 +44,8 @@ export function ProductList() {
   // Filter state
   const [productFilter, setProductFilter] = useState<ProductFilter>({ brand: '', brandType: '', typeNumber: '', color: '' });
 
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      if (productFilter.brand && p.brand !== productFilter.brand) return false;
-      if (productFilter.brandType && p.brand_type !== productFilter.brandType) return false;
-      if (productFilter.typeNumber && p.type_number !== productFilter.typeNumber) return false;
-      if (productFilter.color && p.color !== productFilter.color) return false;
-      return true;
-    });
-  }, [products, productFilter]);
+  const page = usePagedQuery<Product>('products', { keyword, brand: productFilter.brand, brand_type: productFilter.brandType, type_number: productFilter.typeNumber, color: productFilter.color }, 50, revision);
+  const filteredProducts = page.rows;
 
   const columns = [
     { key: 'name' as const, header: 'Nama Produk', width: 250 },
@@ -94,7 +81,7 @@ export function ProductList() {
         
         return (
           <div className={isLow ? 'text-red-600 font-bold' : ''}>
-             {stock} Pcs
+             {stock} {row.calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}
           </div>
         );
       }
@@ -139,7 +126,7 @@ export function ProductList() {
   ];
 
   const handleSearch = (keyword: string) => {
-    searchProducts(keyword);
+    setKeyword(keyword);
   };
 
 
@@ -153,7 +140,7 @@ export function ProductList() {
             Daftar Produk
           </h1>
           <p className="text-gray-500 text-sm mt-1">
-            {filteredProducts.length} produk ditemukan
+            {page.total} produk ditemukan
           </p>
         </div>
         <Button onClick={handleAddNew} variant="outline">
@@ -180,6 +167,7 @@ export function ProductList() {
         emptyMessage="Tidak ada produk ditemukan"
       />
 
+      <PageControls {...page} />
       {/* Modal */}
       <ProductFormModal
         isOpen={showModal}

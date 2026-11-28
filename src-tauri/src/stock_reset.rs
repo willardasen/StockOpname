@@ -1,23 +1,15 @@
+use crate::database::Database;
 use sqlx::SqlitePool;
 use tauri::State;
-use tauri_plugin_sql::{DbInstances, DbPool};
 
 #[tauri::command]
-pub async fn reset_stock(
-    db_instances: State<'_, DbInstances>,
-    db: String,
-    user_id: i64,
-    password: String,
-) -> Result<bool, String> {
-    let pool = {
-        let instances = db_instances.0.read().await;
-        let Some(DbPool::Sqlite(pool)) = instances.get(&db) else {
-            return Err("Database stok belum tersedia.".into());
-        };
-        pool.clone()
-    };
-
-    reset_stock_for_user(&pool, user_id, password).await
+pub async fn reset_stock(db: State<'_, Database>, password: String) -> Result<bool, String> {
+    let session = db
+        .session
+        .try_write()
+        .map_err(|_| "Penyimpanan data sedang berlangsung. Coba lagi.")?;
+    let user = session.user.ok_or("Silakan masuk kembali.")?;
+    reset_stock_for_user(&db.pool, user, password).await
 }
 
 async fn reset_stock_for_user(
@@ -36,7 +28,7 @@ async fn reset_stock_for_user(
     };
 
     let valid_password = tauri::async_runtime::spawn_blocking(move || {
-        crate::commands::verify_password(password, password_hash)
+        bcrypt::verify(password, &password_hash).unwrap_or(false)
     })
     .await
     .map_err(|error| error.to_string())?;
@@ -51,7 +43,7 @@ async fn reset_stock_for_user(
 async fn clear_stock(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let mut transaction = pool.begin_with("BEGIN IMMEDIATE").await?;
     for statement in [
-        "UPDATE products SET stock = 0",
+        "UPDATE products SET stock = 0, ledger_base = 0",
         "DELETE FROM transactions",
         "DELETE FROM global_opname",
     ] {
@@ -83,14 +75,14 @@ mod tests {
              CREATE TABLE brands (id INTEGER PRIMARY KEY, name TEXT, pcs_per_box INTEGER);
              CREATE TABLE products (
                  id INTEGER PRIMARY KEY AUTOINCREMENT, brand_id INTEGER REFERENCES brands(id),
-                 stock INTEGER, min_stock INTEGER, is_active INTEGER
+                 stock INTEGER, min_stock INTEGER, is_active INTEGER, ledger_base INTEGER
              );
              CREATE TABLE transactions (
                  id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER REFERENCES products(id)
              );
              CREATE TABLE global_opname (id INTEGER PRIMARY KEY AUTOINCREMENT);
              INSERT INTO brands VALUES (7, 'Test Brand', 12);
-             INSERT INTO products VALUES (11, 7, 40, 5, 1), (12, 7, 9, 3, 0);
+             INSERT INTO products VALUES (11, 7, 40, 5, 1, 0), (12, 7, 9, 3, 0, 0);
              INSERT INTO transactions VALUES (21, 11);
              INSERT INTO global_opname VALUES (31);",
         )

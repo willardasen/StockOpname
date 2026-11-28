@@ -1,5 +1,4 @@
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile } from '@tauri-apps/plugin-fs';
+import { invoke } from '@tauri-apps/api/core';
 
 /**
  * Export data to Excel file using Tauri's file system
@@ -21,29 +20,12 @@ export async function exportToExcel<T extends Record<string, unknown>>(
         // Generate default filename with extension
         const defaultFilename = filename.endsWith('.xlsx') ? filename : `${filename}.xlsx`;
 
-        // Show save dialog
-        const filePath = await save({
-            filters: [{
-                name: 'Excel Files',
-                extensions: ['xlsx']
-            }],
-            defaultPath: defaultFilename
-        });
-
-        // User cancelled
-        if (!filePath) {
-            return;
-        }
-
         // Create worksheet
         const worksheet = XLSX.utils.json_to_sheet(data);
 
         // Auto-fit column widths based on content
         const columnWidths = Object.keys(data[0] || {}).map((key) => {
-            const maxLength = Math.max(
-                key.length,
-                ...data.map(row => String(row[key] || '').length)
-            );
+            const maxLength = data.reduce((widest, row) => Math.max(widest, String(row[key] ?? '').length), key.length);
             return { wch: Math.min(maxLength + 2, 50) };
         });
         worksheet['!cols'] = columnWidths;
@@ -58,8 +40,9 @@ export async function exportToExcel<T extends Record<string, unknown>>(
             type: 'array'
         });
 
-        // Write file using Tauri's fs plugin
-        await writeFile(filePath, new Uint8Array(excelBuffer));
+        // Rust opens the native save dialog and writes the workbook atomically.
+        const saved = await invoke<boolean>('export_workbook', { filename: defaultFilename, bytes: Array.from(new Uint8Array(excelBuffer)) });
+        if (!saved) return;
 
         alert('Export berhasil disimpan!');
     } catch (error) {

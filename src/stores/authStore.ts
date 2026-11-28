@@ -4,53 +4,27 @@ import type { User } from '@/types/database';
 import type { LoginCredentials } from '@/types/auth';
 
 interface AuthState {
-    user: User | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    error: string | null;
-    login: (credentials: LoginCredentials) => Promise<boolean>;
-    logout: () => void;
-    checkAuth: () => void;
+  user: User | null;
+  setup: boolean;
+  isAuthenticated: boolean;
+  checkAuth: () => Promise<void>;
+  login: (credentials: LoginCredentials, replacement?: string) => Promise<boolean>;
+  logout: () => Promise<void>;
 }
-
-export const useAuthStore = create<AuthState>((set) => ({
-    user: JSON.parse(localStorage.getItem('user') || 'null'),
-    isAuthenticated: !!localStorage.getItem('user'),
-    isLoading: false,
-    error: null,
-
-    login: async (credentials: LoginCredentials) => {
-        set({ isLoading: true, error: null });
-        try {
-            const user = await AuthRepo.login(credentials);
-            if (user) {
-                localStorage.setItem('user', JSON.stringify(user));
-                set({ user, isAuthenticated: true, isLoading: false });
-                return true;
-            } else {
-                set({ error: 'Invalid credentials', isLoading: false });
-                return false;
-            }
-        } catch (error) {
-            set({
-                error: error instanceof Error ? error.message : 'Login failed',
-                isLoading: false
-            });
-            return false;
-        }
-    },
-
-    logout: () => {
-        localStorage.removeItem('user');
-        set({ user: null, isAuthenticated: false });
-    },
-
-    checkAuth: () => {
-        const user = localStorage.getItem('user');
-        if (user) {
-            set({ user: JSON.parse(user), isAuthenticated: true });
-        } else {
-            set({ user: null, isAuthenticated: false });
-        }
-    }
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: null, setup: false, isAuthenticated: false,
+  async checkAuth() {
+    localStorage.removeItem('user');
+    const { setup, user } = await AuthRepo.status();
+    set({ setup, user, isAuthenticated: Boolean(user) });
+  },
+  async login(credentials, replacement) {
+    const user = get().setup ? await AuthRepo.createUser(credentials, true) : await AuthRepo.login(credentials, replacement);
+    set({ user, setup: false, isAuthenticated: true });
+    return true;
+  },
+  async logout() {
+    await AuthRepo.logout();
+    set({ user: null, isAuthenticated: false });
+  },
 }));

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getDb } from '@/repositories/db';
+import { MasterRepo } from '@/repositories/MasterRepo';
 import type { Brand, BrandType, TypeNumber, Color } from '@/types/database';
 
 interface MasterDataStore {
@@ -36,13 +36,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
     loadAll: async () => {
         set({ isLoading: true, error: null });
         try {
-            const db = await getDb();
-            const brands = await db.select<Brand[]>('SELECT * FROM brands ORDER BY name ASC');
-            const brandTypes = await db.select<BrandType[]>('SELECT * FROM brand_types ORDER BY name ASC');
-            const typeNumbers = await db.select<TypeNumber[]>('SELECT * FROM type_numbers ORDER BY name ASC');
-            const colors = await db.select<Color[]>('SELECT * FROM colors ORDER BY name ASC');
-
-            set({ brands, brandTypes, typeNumbers, colors });
+            set(await MasterRepo.list());
         } catch (error) {
             console.error('Failed to load master data:', error);
             set({ error: 'Gagal memuat master data' });
@@ -58,9 +52,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
                 return { success: false, message: 'Brand sudah terdaftar!' };
             }
 
-            const db = await getDb();
-            console.log(`Adding Brand: ${name}, Pcs/Box: ${pcsPerBox}, Type: ${calculationType}`);
-            await db.execute('INSERT INTO brands (name, pcs_per_box, calculation_type) VALUES (?, ?, ?)', [name, pcsPerBox, calculationType]);
+            await MasterRepo.write('brands', { name, pcs_per_box: pcsPerBox, calculation_type: calculationType });
             await get().loadAll();
             return { success: true };
         } catch (error) {
@@ -71,12 +63,12 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
 
     deleteBrand: async (id: number) => {
         try {
-            const db = await getDb();
-            await db.execute('DELETE FROM brands WHERE id = ?', [id]);
+            await MasterRepo.write('brands', { id });
             await get().loadAll();
             return true;
         } catch (error) {
-            console.error('Failed to delete brand:', error);
+            set({ error: String(error) });
+            alert(String(error));
             return false;
         }
     },
@@ -88,9 +80,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
                 return { success: false, message: 'Tipe Brand ini sudah ada untuk Brand terpilih!' };
             }
 
-            const db = await getDb();
-            console.log(`Adding BrandType: ${name}, brandId: ${brandId}`);
-            await db.execute('INSERT INTO brand_types (name, brand_id) VALUES (?, ?)', [name, brandId]);
+            await MasterRepo.write('brand_types', { name, brand_id: brandId });
             await get().loadAll();
             return { success: true };
         } catch (error) {
@@ -101,8 +91,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
 
     deleteBrandType: async (id: number) => {
         try {
-            const db = await getDb();
-            await db.execute('DELETE FROM brand_types WHERE id = ?', [id]);
+            await MasterRepo.write('brand_types', { id });
             await get().loadAll();
             return true;
         } catch (error) {
@@ -118,9 +107,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
                 return { success: false, message: 'No. Tipe ini sudah ada untuk Brand terpilih!' };
             }
 
-            const db = await getDb();
-            console.log(`Adding TypeNumber: ${name}, brandId: ${brandId}`);
-            await db.execute('INSERT INTO type_numbers (name, brand_id) VALUES (?, ?)', [name, brandId]);
+            await MasterRepo.write('type_numbers', { name, brand_id: brandId });
             await get().loadAll();
             return { success: true };
         } catch (error) {
@@ -131,8 +118,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
 
     deleteTypeNumber: async (id: number) => {
         try {
-            const db = await getDb();
-            await db.execute('DELETE FROM type_numbers WHERE id = ?', [id]);
+            await MasterRepo.write('type_numbers', { id });
             await get().loadAll();
             return true;
         } catch (error) {
@@ -148,8 +134,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
                 return { success: false, message: 'Warna sudah terdaftar!' };
             }
 
-            const db = await getDb();
-            await db.execute('INSERT INTO colors (name) VALUES (?)', [name]);
+            await MasterRepo.write('colors', { name });
             await get().loadAll();
             return { success: true };
         } catch (error) {
@@ -160,8 +145,7 @@ export const useBrandStore = create<MasterDataStore>((set, get) => ({
 
     deleteColor: async (id: number) => {
         try {
-            const db = await getDb();
-            await db.execute('DELETE FROM colors WHERE id = ?', [id]);
+            await MasterRepo.write('colors', { id });
             await get().loadAll();
             return true;
         } catch (error) {

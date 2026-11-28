@@ -8,7 +8,6 @@ export function useProductForm() {
         createProduct,
         updateProduct,
         deleteProduct,
-        loadProducts,
         setSelectedProduct,
         selectedProduct
     } = useProductStore();
@@ -62,7 +61,7 @@ export function useProductForm() {
             stock: product.stock,
             min_stock: product.min_stock,
             transaction_date: product.created_at ? product.created_at.split(' ')[0] : format(new Date(), 'yyyy-MM-dd'),
-            note: 'Stok Awal',
+            note: undefined,
         });
         setIsEditing(true);
         setShowModal(true);
@@ -73,22 +72,22 @@ export function useProductForm() {
 
         if (isEditing && selectedProduct) {
             // When editing, exclude only stock (stock should only change via transactions)
-            const { stock: _stock, ...editData } = formData;
-            await updateProduct({ id: selectedProduct.id, ...editData });
+            const editData = { ...formData };
+            delete editData.stock;
+            if (editData.transaction_date === selectedProduct.created_at?.split(' ')[0]) delete editData.transaction_date;
+            if (!await updateProduct({ id: selectedProduct.id, ...editData })) return;
         } else {
-            await createProduct(formData);
+            if (!await createProduct(formData)) return;
         }
 
         setShowModal(false);
-        loadProducts();
     };
 
     const handleDelete = async () => {
         if (selectedProduct && confirm('Yakin ingin menghapus produk ini?')) {
             await deleteProduct(selectedProduct.id);
             setShowModal(false);
-            loadProducts();
-        }
+            }
     };
 
     // Delete product by ID (for direct delete from table)
@@ -97,8 +96,7 @@ export function useProductForm() {
         if (idToDelete) {
             await deleteProduct(idToDelete);
             setShowModal(false);
-            loadProducts();
-        }
+            }
     };
 
     return {

@@ -1,4 +1,4 @@
-import { memo, useState, useMemo } from 'react';
+import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { VirtualTable, ProductFilterBar, ProductFilter } from '@/components/common';
@@ -18,6 +18,9 @@ const ITEMS_PER_PAGE = 25;
 interface TransactionHistoryTableProps {
     type: 'IN' | 'OUT';
     data: TransactionWithProduct[];
+    currentPage: number;
+    totalItems: number;
+    setCurrentPage: (page: number) => void;
     tableSearch: string;
     setTableSearch: (val: string) => void;
     startDate: string;
@@ -34,7 +37,7 @@ interface TransactionHistoryTableProps {
 
 export const StockTransactionTable = memo(({
     type,
-    data,
+    data, currentPage, totalItems, setCurrentPage,
     tableSearch,
     setTableSearch,
     startDate,
@@ -51,25 +54,7 @@ export const StockTransactionTable = memo(({
     const isStockIn = type === 'IN';
     const qtyColor = isStockIn ? 'text-green-600' : 'text-orange-600';
 
-    // Pagination state
-    const [currentPage, setCurrentPage] = useState(1);
-
-    // Calculate paginated data
-    const totalItems = data.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
-
-    // Reset to page 1 when data changes (e.g., filter applied)
-    const dataKey = useMemo(() => data.map(d => d.id).join(','), [data]);
-    useMemo(() => {
-        setCurrentPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [dataKey]);
-
-    const paginatedData = useMemo(() => {
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        return data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [data, currentPage]);
-
     const startItem = totalItems === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
     const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
 
@@ -134,7 +119,7 @@ export const StockTransactionTable = memo(({
             <ProductFilterBar onFilterChange={onProductFilterChange} />
 
             <VirtualTable
-                data={paginatedData}
+                data={data}
                 columns={[
                     { key: 'created_at', header: 'Tanggal', width: 100, render: (_, row) => format(new Date((row as TransactionWithProduct).created_at), 'dd/MM/yyyy') },
                     { key: 'product_name', header: 'Nama Produk', width: 200 },
@@ -146,14 +131,15 @@ export const StockTransactionTable = memo(({
                     {
                         key: 'qty', header: 'Box', width: 80, align: 'right' as const, render: (_, row) => {
                             const t = row as TransactionWithProduct;
+                            if (t.calculation_type === 'SIZE') return '-';
                             return t.pcs_per_box && t.pcs_per_box > 1
                                 ? new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format(t.qty / t.pcs_per_box)
                                 : (t.pcs_per_box === 1 && t.qty > 0 ? t.qty : '-');
                         }
                     },
                     {
-                        key: 'qty_pcs', header: 'Jumlah (Pcs)', width: 100, align: 'right' as const, render: (_, row) => (
-                            <span className={`font-medium ${qtyColor}`}>{formatNumber((row as TransactionWithProduct).qty)}</span>
+                        key: 'qty_pcs', header: 'Jumlah', width: 100, align: 'right' as const, render: (_, row) => (
+                            <span className={`font-medium ${qtyColor}`}>{formatNumber((row as TransactionWithProduct).qty)} {(row as TransactionWithProduct).calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}</span>
                         )
                     },
                     {
@@ -205,7 +191,7 @@ export const StockTransactionTable = memo(({
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                             disabled={currentPage === 1}
                             title="Halaman Sebelumnya"
                         >
@@ -234,7 +220,7 @@ export const StockTransactionTable = memo(({
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                             disabled={currentPage === totalPages}
                             title="Halaman Selanjutnya"
                         >

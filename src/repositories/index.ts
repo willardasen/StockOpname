@@ -1,4 +1,4 @@
-export { getDb, initializeDatabase, closeDb, resetStock } from './db';
+export { resetStock } from './db';
 export { AuthRepo } from './AuthRepo';
 export { ProductRepo } from './ProductRepo';
 export { TransactionRepo } from './TransactionRepo';

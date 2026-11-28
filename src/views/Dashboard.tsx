@@ -17,7 +17,8 @@ const formatNumber = (num: number): string => {
 export function Dashboard() {
   const { 
     totalCount, 
-    lowStockProducts, 
+    lowStockCount,
+    lowStockProducts,
     loadStats, 
     loadLowStockProducts 
   } = useProductStore();
@@ -43,7 +44,7 @@ export function Dashboard() {
     },
     {
       title: 'Stok Menipis',
-      value: formatNumber(lowStockProducts.length),
+      value: formatNumber(lowStockCount),
       icon: AlertTriangle,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100 dark:bg-orange-900/30'
@@ -113,7 +114,7 @@ export function Dashboard() {
                       )}
                       <div>
                         <p className="font-medium text-sm">{tx.product_name}</p>
-                        <p className="text-xs text-gray-500">{tx.type} • {tx.qty} pcs</p>
+                        <p className="text-xs text-gray-500">{tx.type} • {tx.signed_delta ?? tx.qty} {tx.calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}</p>
                       </div>
                     </div>
                     <span className="text-xs text-gray-400">
@@ -136,14 +137,14 @@ export function Dashboard() {
               <p className="text-gray-500 text-center py-4">Semua stok aman</p>
             ) : (
               <div className="space-y-3">
-                {lowStockProducts.slice(0, 5).map((product) => (
+                {lowStockProducts.map((product) => (
                   <div key={product.id} className="flex items-center justify-between p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20">
                     <div>
                       <p className="font-medium text-sm">{product.name}</p>
                       <p className="text-xs text-gray-500">{product.brand} {product.brand_type}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-bold text-orange-600">{product.stock}</p>
+                      <p className="text-sm font-bold text-orange-600">{product.stock} {product.calculation_type === 'SIZE' ? 'Pasang' : 'Pcs'}</p>
                       <p className="text-xs text-gray-500">Min: {product.min_stock}</p>
                     </div>
                   </div>
